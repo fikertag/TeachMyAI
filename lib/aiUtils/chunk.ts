@@ -8,10 +8,10 @@ export interface ChunkerOptions {
 
 export async function chunkText(
   text: string,
-  options: ChunkerOptions = {}
+  options: ChunkerOptions = {},
 ): Promise<string[]> {
   const splitter = new RecursiveCharacterTextSplitter({
-    chunkSize: options.chunkSize ?? 500,
+    chunkSize: options.chunkSize ?? 700,
     chunkOverlap: options.chunkOverlap ?? 50,
     separators: options.separators ?? ["\n\n", "\n", " "],
   });

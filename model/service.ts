@@ -21,6 +21,8 @@ const StoreSchema: Schema<IService> = new Schema(
   { timestamps: true },
 );
 
+StoreSchema.index({ ownerId: 1 }, { unique: true });
+
 const ServiceModel: Model<IService> =
   mongoose.models.Service || mongoose.model<IService>("Service", StoreSchema);
 

@@ -25,7 +25,10 @@ const RagChunksSchema: Schema<IRagChunks> = new Schema<IRagChunks>(
   { timestamps: true },
 );
 
-RagChunksSchema.index({ docName: 1, index: 1 }, { unique: true });
+RagChunksSchema.index(
+  { serviceId: 1, documentId: 1, index: 1 },
+  { unique: true },
+);
 
 const RagChunks: Model<IRagChunks> =
   mongoose.models.RagChunks ||
