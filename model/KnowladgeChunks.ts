@@ -1,7 +1,8 @@
 import mongoose, { Schema, Document, Model, Types } from "mongoose";
 
 export interface IRagChunks extends Document {
-  docName: string;
+  documentId: Types.ObjectId;
+  serviceId: Types.ObjectId;
   chunkText: string;
   index: number;
   embedding: Types.Array<number>;
@@ -11,7 +12,12 @@ export interface IRagChunks extends Document {
 
 const RagChunksSchema: Schema<IRagChunks> = new Schema<IRagChunks>(
   {
-    docName: { type: String, required: true },
+    documentId: {
+      type: Schema.Types.ObjectId,
+      ref: "KnowledgeDocument",
+      required: true,
+    },
+    serviceId: { type: Schema.Types.ObjectId, ref: "Service", required: true },
     chunkText: { type: String, required: true },
     index: { type: Number, required: true },
     embedding: { type: [Number], required: true },

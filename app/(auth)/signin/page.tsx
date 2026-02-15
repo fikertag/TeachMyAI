@@ -43,7 +43,7 @@ export default function LoginForm({
         {
           email,
           password,
-          callbackURL: "/dashboard",
+          callbackURL: "/builder",
         },
         {
           onRequest: () => {

@@ -1,6 +1,5 @@
 "use client";
 import { authClient } from "@/lib/auth-client";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -53,7 +52,7 @@ export default function SignupForm({
           },
           onSuccess: (ctx) => {
             setSuccess("Signup successful! Redirecting...");
-            router.replace("/dashboard");
+            router.replace("/builder");
             setIsLoading(false);
           },
           onError: (ctx) => {
