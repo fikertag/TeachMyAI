@@ -74,13 +74,7 @@ export default function LoginForm({
   };
 
   return (
-    <div
-      className={cn(
-        "min-h-svh w-full bg-muted flex items-center justify-center p-4 sm:p-6",
-        className,
-      )}
-      {...props}
-    >
+    <div className="min-h-svh w-full bg-muted flex items-center justify-center p-4 sm:p-6">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-2xl">Login to your account</CardTitle>
