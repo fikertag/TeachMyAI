@@ -1,16 +1,9 @@
 import { betterAuth } from "better-auth";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
 import { sendEmail } from "./email-service";
-import dbConnect from "@/lib/mongoose";
-import mongoose from "mongoose";
+import { getMongoDb } from "@/lib/mongodb";
 
-await dbConnect();
-
-const db = mongoose.connection.db;
-
-if (!db) {
-  throw new Error("Database connection is not established.");
-}
+const db = await getMongoDb();
 
 export const auth = betterAuth({
   trustedOrigins: ["http://localhost:3000"],
