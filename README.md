@@ -1,36 +1,98 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# teachMyAI 🧠⚒️
 
-## Getting Started
+**teachMyAI** is a full-stack AI platform that allows service providers to train a domain-specific assistant using their own content.
+Providers can create shareable chat pages or integrate the assistant into their own products via API.
 
-First, run the development server:
+The system uses Retrieval-Augmented Generation (RAG) to ensure responses are grounded in provider-supplied knowledge rather than generic model output.
+
+---
+
+## ✨ Features
+
+### Core
+
+- Create service-specific AI assistants
+- Input or upload knowledge content
+- Automatic indexing & embedding
+- Public shareable chat pages
+  `/{slug}`
+- Context-grounded responses
+
+### Developer Integration
+
+- API access for external apps/websites
+- Scoped assistant access via slug
+- JSON-based chat responses
+
+### Optional / Future Enhancements
+
+- File uploads (PDF, Markdown)
+- Citations & source highlighting
+- Streaming responses
+- Embeddable chat widget
+- Analytics dashboard
+- Usage limits & rate limiting
+
+---
+
+## 🏗️ Architecture Overview
+
+User Content → Chunking → Embeddings → Vector Store
+↓
+User Question → Retrieval → Prompt Assembly → LLM → Response
+
+---
+
+## 🧰 Tech Stack
+
+- Next.js
+- TypeScript
+- Tailwind CSS
+- langchain
+- gemini
+
+**Database**
+
+- MongoDB
+
+## 🚀 Getting Started
+
+### 1️⃣ Clone
+
+```bash
+git clone https://github.com/fikertag/TeachMyAI
+cd teachMyAI
+```
+
+### 2️⃣ Install
+
+```bash
+npm install
+```
+
+### 3️⃣ Environment
+
+Create `.env.local`
+
+```
+OPENAI_API_KEY=
+VECTOR_DB_KEY=
+DATABASE_URL=
+```
+
+### 4️⃣ Run
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 👨‍💻 Author
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Built by Fiker Yilkal
+Full-Stack Developer
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## 📜 License
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
