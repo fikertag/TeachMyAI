@@ -93,7 +93,6 @@ export async function POST(req: Request) {
     }
 
     const docs = allChunks.map((chunk, i) => ({
-      // Gemini embed API returns items like { values: number[] }
       serviceId: serviceObjectId,
       documentId: document._id,
       index: chunk.index,

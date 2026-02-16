@@ -16,7 +16,7 @@
     "@langchain/textsplitters": "^1.0.0",
     "better-auth": "^1.4.18",
     "class-variance-authority": "^0.7.1",
-    "langchain": "^1.1.2",
+    "langchain": "^1.2.24",
     "lucide-react": "^0.552.0",
     "mongodb": "^6.21.0",
     "mongoose": "^8.19.3",
