@@ -22,12 +22,33 @@ const Schema = z.object({
     .optional(),
 });
 
-function msgToText(m: any) {
-  if (!m) return "";
-  if (typeof m === "string") return m;
-  if (typeof m?.content === "string") return m.content;
-  if (Array.isArray(m?.content))
-    return m.content.map((p: any) => p?.text || "").join("\n");
+type RequestBody = z.infer<typeof Schema>;
+
+type ChunkHit = {
+  chunkText: string;
+  score: number;
+};
+
+function msgToText(message: unknown): string {
+  if (message == null) return "";
+  if (typeof message === "string") return message;
+
+  if (typeof message === "object") {
+    const content = (message as { content?: unknown }).content;
+    if (typeof content === "string") return content;
+
+    if (Array.isArray(content)) {
+      return content
+        .map((part) => {
+          if (!part || typeof part !== "object") return "";
+          const text = (part as Record<string, unknown>).text;
+          return typeof text === "string" ? text : "";
+        })
+        .filter(Boolean)
+        .join("\n");
+    }
+  }
+
   return "";
 }
 
@@ -35,7 +56,7 @@ export async function POST(req: NextRequest) {
   try {
     await dbConnect();
 
-    const body = Schema.parse(await req.json());
+    const body: RequestBody = Schema.parse(await req.json());
     const { message, serviceId, history = [] } = body;
 
     if (!mongoose.Types.ObjectId.isValid(serviceId)) {
@@ -45,7 +66,7 @@ export async function POST(req: NextRequest) {
     const serviceObjectId = new mongoose.Types.ObjectId(serviceId);
 
     const service = await ServiceModel.findById(serviceObjectId)
-      .select("systemPrompt")
+      .select("systemPrompt promptConfig")
       .lean();
 
     const apiKey = process.env.GEMINI_API_KEY;
@@ -62,12 +83,13 @@ export async function POST(req: NextRequest) {
     // 1️⃣ Embed question
     const emb = await embedTextGemini({ contents: [message] });
     const vector = emb?.[0]?.values;
+    console.log("Embedding vector:", vector);
 
     if (!vector)
       return NextResponse.json({ error: "Embedding failed" }, { status: 500 });
 
     // 2️⃣ Vector search
-    const chunks = await RagChunks.aggregate([
+    const chunks = await RagChunks.aggregate<ChunkHit>([
       {
         $vectorSearch: {
           queryVector: vector,
@@ -75,9 +97,6 @@ export async function POST(req: NextRequest) {
           path: "embedding",
           numCandidates: 50,
           limit: 5,
-          filter: {
-            serviceId: serviceObjectId,
-          },
         },
       },
       { $match: { serviceId: serviceObjectId } },
@@ -90,9 +109,11 @@ export async function POST(req: NextRequest) {
       },
     ]);
 
+    console.log("Vector search results:", chunks);
+
     // 3️⃣ Build retrieved context
     const context = chunks
-      .map((c: any, i: number) => `Source ${i + 1}:\n${c.chunkText}`)
+      .map((c, i) => `Source ${i + 1}:\n${c.chunkText}`)
       .join("\n\n");
 
     // 4️⃣ Format frontend history
@@ -102,10 +123,35 @@ export async function POST(req: NextRequest) {
       .join("\n");
 
     const systemPrompt = (service?.systemPrompt || "").trim();
+    const servicePromptConfig =
+      service && typeof service === "object"
+        ? ((service as { promptConfig?: unknown }).promptConfig as
+            | Record<string, unknown>
+            | undefined)
+        : undefined;
+
+    const cfgBase = rga_ethify_cfg;
+    const cfgMerged = {
+      ...cfgBase,
+      ...(servicePromptConfig ?? {}),
+    };
+
+    const mergedInstruction =
+      typeof cfgMerged.instruction === "string" && cfgMerged.instruction.trim()
+        ? cfgMerged.instruction
+        : systemPrompt
+          ? systemPrompt
+          : cfgBase.instruction;
+
+    const mergedContextBase =
+      typeof cfgMerged.context === "string" && cfgMerged.context.trim()
+        ? cfgMerged.context
+        : cfgBase.context;
+
     const cfg = {
-      ...rga_ethify_cfg,
-      instruction: systemPrompt || rga_ethify_cfg.instruction,
-      context: `${rga_ethify_cfg.context}\n\n${context}`,
+      ...cfgMerged,
+      instruction: mergedInstruction,
+      context: `${mergedContextBase ?? ""}\n\n${context}`.trim(),
     };
 
     const finalPrompt = buildPromptFromConfig(

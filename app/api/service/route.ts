@@ -13,6 +13,18 @@ const CreateServiceSchema = z.object({
   slug: z.string().min(1).optional(),
   description: z.string().optional(),
   systemPrompt: z.string().optional(),
+  promptConfig: z
+    .object({
+      role: z.string().optional(),
+      instruction: z.union([z.string(), z.array(z.string())]).optional(),
+      context: z.string().optional(),
+      output_format: z.union([z.string(), z.array(z.string())]).optional(),
+      examples: z.union([z.string(), z.array(z.string())]).optional(),
+      goal: z.string().optional(),
+      reasoning_strategy: z.string().optional(),
+    })
+    .passthrough()
+    .optional(),
 });
 
 function slugify(value: string) {
@@ -56,6 +68,7 @@ export async function GET() {
         slug: s.slug,
         description: s.description,
         systemPrompt: s.systemPrompt,
+        promptConfig: s.promptConfig,
         createdAt: s.createdAt,
         updatedAt: s.updatedAt,
       })),
@@ -114,6 +127,7 @@ export async function POST(req: Request) {
         slug,
         description: body.description ?? "",
         systemPrompt: body.systemPrompt ?? "",
+        promptConfig: body.promptConfig,
       });
 
       return NextResponse.json(
@@ -125,6 +139,7 @@ export async function POST(req: Request) {
             slug: service.slug,
             description: service.description,
             systemPrompt: service.systemPrompt,
+            promptConfig: service.promptConfig,
           },
         },
         { status: 201 },
