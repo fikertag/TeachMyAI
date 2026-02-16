@@ -20,7 +20,7 @@ export default function Footer() {
             aria-label="go home"
             className="hover:bg-foreground/5 -ml-1.5 flex size-8 rounded-lg *:m-auto"
           >
-            <LogoIcon uniColor className="w-fit" />
+            TeachMyAi{" "}
           </Link>
           <nav className="my-8 flex flex-wrap gap-x-8 gap-y-2">
             {links.map((link) => (

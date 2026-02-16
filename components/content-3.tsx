@@ -2,8 +2,8 @@ import { Lightbulb, Pencil, PencilRuler } from "lucide-react";
 
 export default function Content() {
   return (
-    <section id="how-it-works" className="bg-background @container py-24">
-      <div className="mx-auto max-w-2xl px-6">
+    <section className="bg-background @container py-24">
+      <div className="mx-auto max-w-5xl px-6">
         <div className="space-y-4">
           <h2 className="text-balance font-serif text-4xl font-medium">
             Train your assistant with your content

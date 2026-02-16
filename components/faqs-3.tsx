@@ -70,7 +70,10 @@ export default function FAQs() {
         </Accordion>
         <p className="text-muted-foreground mt-8 text-center text-sm">
           Need help getting set up?{" "}
-          <Link href="#" className="text-primary font-medium hover:underline">
+          <Link
+            href="https://t.me/fikertag"
+            className="text-primary font-medium hover:underline"
+          >
             Contact support
           </Link>
         </p>

@@ -3,7 +3,7 @@ import { CSSProperties } from "react";
 export default function Stats() {
   return (
     <section className="bg-background @container py-24">
-      <div className="mx-auto max-w-2xl px-6">
+      <div className="mx-auto max-w-5xl px-6">
         <div className="space-y-4">
           <h2 className="text-balance font-serif text-4xl font-medium">
             Insights and scale

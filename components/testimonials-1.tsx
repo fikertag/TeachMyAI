@@ -34,7 +34,7 @@ const testimonials = [
 export default function Testimonials() {
   return (
     <section className="bg-background @container py-24">
-      <div className="mx-auto max-w-2xl px-6">
+      <div className="mx-auto max-w-3xl px-6">
         <div className="space-y-4">
           <h2 className="text-balance font-serif text-4xl font-medium">
             Built for accurate customer answers

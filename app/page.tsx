@@ -1,6 +1,4 @@
 import HeroSection from "@/components/hero-section-3";
-
-import LogoCloud from "@/components/logo-cloud-2";
 import Features from "@/components/features-3";
 import Content from "@/components/content-3";
 import Stats from "@/components/stats-2";
@@ -14,7 +12,6 @@ export default function Page() {
   return (
     <>
       <HeroSection />
-      <LogoCloud />
       <Features />
       <Content />
       <Stats />

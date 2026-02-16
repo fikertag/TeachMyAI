@@ -1,4 +1,3 @@
-import React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { HeroHeader } from "./header";
@@ -10,6 +9,7 @@ import {
   Plus,
 } from "lucide-react";
 import Image from "next/image";
+import LogoCloud from "@/components/logo-cloud-2";
 
 export default function HeroSection() {
   return (
@@ -18,7 +18,7 @@ export default function HeroSection() {
       <main className="overflow-hidden">
         <section className="bg-background">
           <div className="relative py-40">
-            <div className="mask-radial-from-45% mask-radial-to-75% mask-radial-at-top mask-radial-[75%_100%] aspect-2/3 absolute inset-0 opacity-75 blur-xl md:aspect-square lg:aspect-video dark:opacity-5">
+            <div className="mask-radial-from-45% mask-radial-to-75% mask-radial-at-top mask-radial-[75%_100%] aspect-2/3 absolute inset-0 opacity-75 blur-sm md:aspect-square lg:aspect-video dark:opacity-5">
               <Image
                 src="/landing.avif"
                 alt="hero background"
@@ -27,11 +27,11 @@ export default function HeroSection() {
                 className="h-full w-full object-cover object-top"
               />
             </div>
-            <div className="relative z-10 mx-auto w-full max-w-5xl sm:pl-6">
+            <div className="relative z-10 mx-auto w-full max-w-6xl sm:pl-6">
               <div className="flex items-center justify-between max-md:flex-col">
-                <div className="max-w-md max-sm:px-6">
+                <div className="max-w-lg max-sm:px-6">
                   <h1 className="text-balance font-serif text-4xl font-medium sm:text-5xl">
-                    Turn your knowledge into an AI assistant.
+                    Turn your knowledge Into an AI assistant
                   </h1>
                   <p className="text-muted-foreground mt-4 text-balance">
                     Upload your service info, policies, and product docs. Get a
@@ -39,10 +39,12 @@ export default function HeroSection() {
                     only your provided knowledge.
                   </p>
 
-                  <Button asChild className="mt-6 pr-1.5">
+                  <Button asChild className="mt-6 pr-1.5" size={"lg"}>
                     <Link href="/builder">
-                      <span className="text-nowrap">Create your assistant</span>
-                      <ChevronRight className="opacity-50" />
+                      <span className="text-nowrap text-amber-50">
+                        Create your assistant
+                      </span>
+                      <ChevronRight className="opacity-50 text-amber-50" />
                     </Link>
                   </Button>
                 </div>
@@ -96,6 +98,7 @@ export default function HeroSection() {
           </div>
         </section>
       </main>
+      <LogoCloud />
     </>
   );
 }

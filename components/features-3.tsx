@@ -21,15 +21,15 @@ type Feature =
 export default function Features() {
   const [feature, setFeature] = useState<Feature>("seamless-integrations");
   return (
-    <section id="api" className="bg-background @container py-24">
-      <div className="@2xl:grid-cols-2 mx-auto grid max-w-3xl gap-6 px-6">
+    <section id="api" className="bg-background @container py-24 mt-15">
+      <div className="@2xl:grid-cols-2 mx-auto grid max-w-5xl gap-10 px-6">
         <div>
           <div>
             <h2 className="text-balance font-serif text-4xl font-medium">
-              Launch a knowledge-based assistant in minutes
+              Launch a knowledge based assistant in minutes
             </h2>
             <p className="text-muted-foreground mb-6 mt-4 text-balance">
-              Upload your content once — we handle chunking, embeddings,
+              Upload your content once we handle chunking, embeddings,
               retrieval, and grounded responses behind the scenes.
             </p>
             <Button

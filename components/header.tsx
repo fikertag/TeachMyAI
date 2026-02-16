@@ -33,7 +33,7 @@ export const HeroHeader = () => {
             "bg-background/75 border-b border-black/5 backdrop-blur-lg",
         )}
       >
-        <div className="mx-auto max-w-5xl px-6">
+        <div className="mx-auto max-w-7xl px-6">
           <div className="relative flex flex-wrap items-center justify-between gap-6 py-6 lg:gap-0">
             <div className="flex w-full justify-between gap-6 lg:w-auto">
               <Link
@@ -41,7 +41,7 @@ export const HeroHeader = () => {
                 aria-label="home"
                 className="flex items-center space-x-2"
               >
-                <Logo />
+                TeachMyAi
               </Link>
 
               <button
@@ -97,10 +97,10 @@ export const HeroHeader = () => {
                 <Button
                   asChild
                   size="sm"
-                  className={cn(isScrolled && "lg:hidden")}
+                  className={cn(isScrolled && "lg:hidden ")}
                 >
                   <Link href="/signup">
-                    <span>Sign Up</span>
+                    <span className="text-amber-50">Sign Up</span>
                   </Link>
                 </Button>
                 <Button
@@ -109,7 +109,7 @@ export const HeroHeader = () => {
                   className={cn(isScrolled ? "lg:inline-flex" : "hidden")}
                 >
                   <Link href="/builder">
-                    <span>Get Started</span>
+                    <span className="text-amber-50">Get Started</span>
                   </Link>
                 </Button>
               </div>
