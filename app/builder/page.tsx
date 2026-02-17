@@ -13,6 +13,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { rga_ethify_cfg } from "@/lib/aiUtils/promots";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type Service = {
   id: string;
@@ -22,6 +33,15 @@ type Service = {
   description: string;
   systemPrompt: string;
   promptConfig?: Record<string, unknown>;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+type KnowledgeDocument = {
+  id: string;
+  serviceId: string;
+  title: string;
+  source: string;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -85,6 +105,17 @@ export default function BuilderPage() {
   const [docText, setDocText] = useState("");
   const [isIngesting, setIsIngesting] = useState(false);
 
+  const [knowledgeDocs, setKnowledgeDocs] = useState<KnowledgeDocument[]>([]);
+  const [isLoadingKnowledge, setIsLoadingKnowledge] = useState(false);
+  const [busyDocId, setBusyDocId] = useState<string>("");
+  const [busyAction, setBusyAction] = useState<"delete" | "">("");
+  const [showAddKnowledge, setShowAddKnowledge] = useState(false);
+
+  const [serviceSlugDraft, setServiceSlugDraft] = useState("");
+  const [serviceDescriptionDraft, setServiceDescriptionDraft] = useState("");
+  const [isSavingService, setIsSavingService] = useState(false);
+  const [isDeletingService, setIsDeletingService] = useState(false);
+
   const [selectedServiceId, setSelectedServiceId] = useState<string>("");
 
   const hasService = services.length > 0;
@@ -93,6 +124,17 @@ export default function BuilderPage() {
     if (!selectedServiceId) return services[0];
     return services.find((s) => s.id === selectedServiceId) ?? services[0];
   }, [selectedServiceId, services]);
+
+  useEffect(() => {
+    if (!selectedService) {
+      setServiceSlugDraft("");
+      setServiceDescriptionDraft("");
+      return;
+    }
+
+    setServiceSlugDraft(selectedService.slug ?? "");
+    setServiceDescriptionDraft(selectedService.description ?? "");
+  }, [selectedService]);
 
   const loadServices = async () => {
     setError("");
@@ -249,13 +291,167 @@ export default function BuilderPage() {
 
       setDocTitle("");
       setDocText("");
+      setShowAddKnowledge(false);
       setSuccess(
         `Ingested ${data.chunksInserted ?? 0}/${data.totalChunks ?? 0} chunks`,
       );
+
+      if (selectedService?.id) {
+        await loadKnowledge(selectedService.id);
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to ingest text");
     } finally {
       setIsIngesting(false);
+    }
+  };
+
+  const loadKnowledge = async (serviceId: string) => {
+    setIsLoadingKnowledge(true);
+    try {
+      const res = await fetch(`/api/knowledge?serviceId=${serviceId}`, {
+        method: "GET",
+      });
+
+      const data = (await res.json()) as {
+        documents?: KnowledgeDocument[];
+        error?: string;
+      };
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to load knowledge");
+      }
+
+      setKnowledgeDocs(data.documents ?? []);
+    } finally {
+      setIsLoadingKnowledge(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!selectedService?.id) {
+      setKnowledgeDocs([]);
+      return;
+    }
+
+    let cancelled = false;
+    const run = async () => {
+      try {
+        await loadKnowledge(selectedService.id);
+      } catch (e: unknown) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : "Failed to load knowledge");
+        }
+      }
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedService?.id]);
+
+  const deleteKnowledge = async (docId: string) => {
+    if (!selectedService?.id) return;
+    setError("");
+    setSuccess("");
+    setBusyDocId(docId);
+    setBusyAction("delete");
+
+    try {
+      const res = await fetch(`/api/knowledge/${docId}`, { method: "DELETE" });
+      const data = (await res.json()) as { ok?: boolean; error?: string };
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to delete knowledge");
+      }
+
+      await loadKnowledge(selectedService.id);
+      setSuccess("Knowledge deleted");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to delete knowledge");
+    } finally {
+      setBusyDocId("");
+      setBusyAction("");
+    }
+  };
+
+  const saveService = async () => {
+    if (!selectedService?.id) return;
+
+    const slugTrimmed = serviceSlugDraft.trim();
+
+    const patch: Record<string, unknown> = {};
+    if (slugTrimmed && slugTrimmed !== selectedService.slug) {
+      patch.slug = slugTrimmed;
+    }
+    if (serviceDescriptionDraft !== selectedService.description) {
+      patch.description = serviceDescriptionDraft;
+    }
+
+    if (Object.keys(patch).length === 0) {
+      setSuccess("No changes to save");
+      return;
+    }
+
+    if ("slug" in patch && !slugTrimmed) {
+      setError("Slug is required");
+      return;
+    }
+
+    setIsSavingService(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const res = await fetch(`/api/service/${selectedService.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+
+      const data = (await res.json()) as { service?: Service; error?: string };
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update service");
+      }
+
+      await loadServices();
+      setSuccess("Service updated");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to update service");
+    } finally {
+      setIsSavingService(false);
+    }
+  };
+
+  const deleteService = async () => {
+    if (!selectedService?.id) return;
+
+    setIsDeletingService(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const res = await fetch(`/api/service/${selectedService.id}`, {
+        method: "DELETE",
+      });
+      const data = (await res.json()) as { ok?: boolean; error?: string };
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to delete service");
+      }
+
+      setShowAddKnowledge(false);
+      setKnowledgeDocs([]);
+      setSelectedServiceId("");
+      await loadServices();
+      setSuccess("Service deleted");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to delete service");
+    } finally {
+      setIsDeletingService(false);
     }
   };
 
@@ -645,25 +841,98 @@ export default function BuilderPage() {
                   <div className="rounded-md border bg-background p-4">
                     <div className="flex flex-col gap-1">
                       <p className="text-sm font-medium">
-                        {primaryService.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Slug: {primaryService.slug}
+                        {selectedService?.name ?? primaryService.name}
                       </p>
                     </div>
-                    {primaryService.description ? (
-                      <p className="mt-3 text-sm text-muted-foreground">
-                        {primaryService.description}
-                      </p>
-                    ) : null}
-                    {primaryService.systemPrompt ? (
-                      <p className="mt-3 text-sm">
-                        <span className="font-medium">System prompt:</span>{" "}
-                        <span className="text-muted-foreground">
-                          {primaryService.systemPrompt}
-                        </span>
-                      </p>
-                    ) : null}
+
+                    <div className="mt-4 grid gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="service-slug">Slug</Label>
+                        <Input
+                          id="service-slug"
+                          value={serviceSlugDraft}
+                          onChange={(e) => setServiceSlugDraft(e.target.value)}
+                          disabled={
+                            !selectedService?.id ||
+                            isSavingService ||
+                            isDeletingService
+                          }
+                          className="bg-background"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Slug must be unique.
+                        </p>
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label htmlFor="service-description">Description</Label>
+                        <textarea
+                          id="service-description"
+                          value={serviceDescriptionDraft}
+                          onChange={(e) =>
+                            setServiceDescriptionDraft(e.target.value)
+                          }
+                          disabled={
+                            !selectedService?.id ||
+                            isSavingService ||
+                            isDeletingService
+                          }
+                          className="min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <Button
+                          type="button"
+                          onClick={() => void saveService()}
+                          disabled={
+                            !selectedService?.id ||
+                            isSavingService ||
+                            isDeletingService
+                          }
+                        >
+                          {isSavingService ? "Saving..." : "Save changes"}
+                        </Button>
+
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              disabled={
+                                !selectedService?.id ||
+                                isSavingService ||
+                                isDeletingService
+                              }
+                            >
+                              {isDeletingService
+                                ? "Deleting..."
+                                : "Delete service"}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Delete service?
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will permanently delete the service and its
+                                API keys and knowledge. This cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                variant="destructive"
+                                onClick={() => void deleteService()}
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -672,20 +941,20 @@ export default function BuilderPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Add knowledge</CardTitle>
+              <CardTitle>Knowledge</CardTitle>
               <CardDescription>
-                Paste text to chunk + embed + store.
+                Add, list, and delete documents.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <form onSubmit={ingestText} className="grid gap-4">
+            <CardContent className="grid gap-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div className="grid gap-2">
-                  <Label htmlFor="service-select">Service</Label>
+                  <Label htmlFor="knowledge-service">Service</Label>
                   <select
-                    id="service-select"
+                    id="knowledge-service"
                     value={selectedService?.id ?? ""}
                     onChange={(e) => setSelectedServiceId(e.target.value)}
-                    disabled={!hasService || isIngesting}
+                    disabled={!hasService || isIngesting || isLoadingKnowledge}
                     className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {services.map((s) => (
@@ -696,44 +965,128 @@ export default function BuilderPage() {
                   </select>
                 </div>
 
-                <div className="grid gap-2">
-                  <Label htmlFor="doc-title">Title (optional)</Label>
-                  <Input
-                    id="doc-title"
-                    value={docTitle}
-                    onChange={(e) => setDocTitle(e.target.value)}
-                    placeholder="Chapter 1 - Introduction"
-                    disabled={!hasService || isIngesting}
-                    className="bg-background"
-                  />
-                </div>
+                <Button
+                  type="button"
+                  disabled={!hasService || !selectedService?.id}
+                  onClick={() => setShowAddKnowledge((v) => !v)}
+                  className="w-full sm:w-auto"
+                >
+                  {showAddKnowledge ? "Close" : "Add knowledge"}
+                </Button>
+              </div>
 
-                <div className="grid gap-2">
-                  <Label htmlFor="doc-text">Text</Label>
-                  <textarea
-                    id="doc-text"
-                    value={docText}
-                    onChange={(e) => setDocText(e.target.value)}
-                    placeholder="Paste your text here..."
-                    disabled={!hasService || isIngesting}
-                    className="min-h-40 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
-                  />
-                </div>
+              {showAddKnowledge ? (
+                <form onSubmit={ingestText} className="grid gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="doc-title">Title (optional)</Label>
+                    <Input
+                      id="doc-title"
+                      value={docTitle}
+                      onChange={(e) => setDocTitle(e.target.value)}
+                      placeholder="Chapter 1 - Introduction"
+                      disabled={
+                        !hasService || !selectedService?.id || isIngesting
+                      }
+                      className="bg-background"
+                    />
+                  </div>
 
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <Button
-                    type="submit"
-                    disabled={!hasService || isIngesting}
-                    className="w-full sm:w-auto"
-                  >
-                    {!hasService
-                      ? "Create a service first"
-                      : isIngesting
-                        ? "Ingesting..."
-                        : "Send to ingest"}
-                  </Button>
+                  <div className="grid gap-2">
+                    <Label htmlFor="doc-text">Text</Label>
+                    <textarea
+                      id="doc-text"
+                      value={docText}
+                      onChange={(e) => setDocText(e.target.value)}
+                      placeholder="Paste your text here..."
+                      disabled={
+                        !hasService || !selectedService?.id || isIngesting
+                      }
+                      className="min-h-40 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <Button
+                      type="submit"
+                      disabled={
+                        !hasService || !selectedService?.id || isIngesting
+                      }
+                      className="w-full sm:w-auto"
+                    >
+                      {!hasService
+                        ? "Create a service first"
+                        : isIngesting
+                          ? "Ingesting..."
+                          : "Send to ingest"}
+                    </Button>
+                  </div>
+                </form>
+              ) : null}
+
+              {!selectedService?.id ? (
+                <p className="text-sm text-muted-foreground">
+                  Create/select a service first.
+                </p>
+              ) : knowledgeDocs.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No knowledge documents yet.
+                </p>
+              ) : (
+                <div className="grid gap-3">
+                  {knowledgeDocs.map((d) => {
+                    const isBusy = busyDocId === d.id;
+                    return (
+                      <div
+                        key={d.id}
+                        className="rounded-md border bg-background p-4"
+                      >
+                        <div className="flex flex-col gap-1">
+                          <p className="text-sm font-medium">{d.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Source: {d.source}
+                          </p>
+                        </div>
+
+                        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                disabled={isBusy}
+                              >
+                                Delete
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>
+                                  Delete knowledge?
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will delete the document and all its
+                                  chunks. This cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  variant="destructive"
+                                  onClick={() => void deleteKnowledge(d.id)}
+                                >
+                                  {isBusy && busyAction === "delete"
+                                    ? "Deleting..."
+                                    : "Delete"}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              </form>
+              )}
             </CardContent>
           </Card>
         </div>

@@ -9,6 +9,7 @@ import RagChunks from "@/model/KnowladgeChunks";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import ServiceModel from "@/model/service";
+import { getKnowledgeLimits } from "@/lib/knowledge-limits";
 
 export const runtime = "nodejs";
 
@@ -45,6 +46,17 @@ export async function POST(req: Request) {
 
     const json = await req.json();
     const body = IngestRequestSchema.parse(json);
+
+    const limits = getKnowledgeLimits();
+    if (body.text.length > limits.maxCharsPerDoc) {
+      return NextResponse.json(
+        {
+          error: `Knowledge text too large. Max ${limits.maxCharsPerDoc} characters`,
+        },
+        { status: 413 },
+      );
+    }
+
     await dbConnect();
 
     const ownerObjectId = new mongoose.Types.ObjectId(userId);
@@ -61,6 +73,19 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "Forbidden: service does not belong to user" },
         { status: 403 },
+      );
+    }
+
+    const docCount = await KnowledgeDocument.countDocuments({
+      serviceId: serviceObjectId,
+    });
+
+    if (docCount >= limits.maxDocsPerService) {
+      return NextResponse.json(
+        {
+          error: `Knowledge document limit reached. Max ${limits.maxDocsPerService} documents per service`,
+        },
+        { status: 409 },
       );
     }
 

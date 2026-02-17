@@ -1,4 +1,3 @@
-import { LogoIcon } from "@/components/logo";
 import Link from "next/link";
 import { ThemeSwitcher } from "./theme-switcher";
 
