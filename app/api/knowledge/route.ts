@@ -52,7 +52,7 @@ export async function GET(req: Request) {
 
     const docs = await KnowledgeDocument.find({ serviceId: serviceObjectId })
       .sort({ createdAt: -1 })
-      .select("_id serviceId title source createdAt updatedAt")
+      .select("_id serviceId title source revokedAt createdAt updatedAt")
       .lean();
 
     return NextResponse.json({
@@ -63,6 +63,7 @@ export async function GET(req: Request) {
         ).serviceId.toString(),
         title: (d as { title: string }).title,
         source: (d as { source: string }).source,
+        revokedAt: (d as { revokedAt?: Date }).revokedAt,
         createdAt: d.createdAt,
         updatedAt: d.updatedAt,
       })),

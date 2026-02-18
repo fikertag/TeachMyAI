@@ -17,6 +17,23 @@ const UpdateServiceSchema = z
   .object({
     slug: z.string().min(1).max(80).optional(),
     description: z.string().max(2000).optional(),
+    systemPrompt: z.string().max(20000).optional(),
+    promptConfig: z
+      .object({
+        role: z.string().optional(),
+        instruction: z.union([z.string(), z.array(z.string())]).optional(),
+        context: z.string().optional(),
+        output_constraints: z
+          .union([z.string(), z.array(z.string())])
+          .optional(),
+        style_or_tone: z.union([z.string(), z.array(z.string())]).optional(),
+        output_format: z.union([z.string(), z.array(z.string())]).optional(),
+        examples: z.union([z.string(), z.array(z.string())]).optional(),
+        goal: z.string().optional(),
+        reasoning_strategy: z.string().optional(),
+      })
+      .passthrough()
+      .optional(),
   })
   .refine(
     (v) => Object.keys(v).length > 0,
@@ -94,6 +111,14 @@ export async function PATCH(
 
     if (typeof body.description === "string") {
       update.description = body.description;
+    }
+
+    if (typeof body.systemPrompt === "string") {
+      update.systemPrompt = body.systemPrompt;
+    }
+
+    if (body.promptConfig !== undefined) {
+      update.promptConfig = body.promptConfig;
     }
 
     try {

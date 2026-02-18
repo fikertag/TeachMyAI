@@ -25,6 +25,22 @@ function base64Url(bytes: Buffer) {
     .replace(/=+$/g, "");
 }
 
+function getApiKeyEncryptionSecret() {
+  return (
+    process.env.API_KEY_ENCRYPTION_SECRET ||
+    process.env.BETTER_AUTH_SECRET ||
+    process.env.AUTH_SECRET ||
+    "teachmyai-dev-api-key-secret"
+  );
+}
+
+function getApiKeyEncryptionKey() {
+  return crypto
+    .createHash("sha256")
+    .update(getApiKeyEncryptionSecret())
+    .digest();
+}
+
 export function generateApiKey(): {
   apiKey: string;
   keyHash: string;
@@ -41,6 +57,49 @@ export function generateApiKey(): {
 
 export function hashApiKey(apiKey: string) {
   return crypto.createHash("sha256").update(apiKey).digest("hex");
+}
+
+export function encryptApiKey(apiKey: string) {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv(
+    "aes-256-gcm",
+    getApiKeyEncryptionKey(),
+    iv,
+  );
+
+  const encrypted = Buffer.concat([
+    cipher.update(apiKey, "utf8"),
+    cipher.final(),
+  ]);
+  const authTag = cipher.getAuthTag();
+
+  return `${iv.toString("hex")}:${authTag.toString("hex")}:${encrypted.toString("hex")}`;
+}
+
+export function decryptApiKey(payload?: string | null) {
+  if (!payload) return null;
+
+  const [ivHex, authTagHex, encryptedHex] = payload.split(":");
+  if (!ivHex || !authTagHex || !encryptedHex) return null;
+
+  try {
+    const decipher = crypto.createDecipheriv(
+      "aes-256-gcm",
+      getApiKeyEncryptionKey(),
+      Buffer.from(ivHex, "hex"),
+    );
+
+    decipher.setAuthTag(Buffer.from(authTagHex, "hex"));
+
+    const decrypted = Buffer.concat([
+      decipher.update(Buffer.from(encryptedHex, "hex")),
+      decipher.final(),
+    ]);
+
+    return decrypted.toString("utf8");
+  } catch {
+    return null;
+  }
 }
 
 export function getApiKeyFromHeaders(headers: Headers): string | null {

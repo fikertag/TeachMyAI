@@ -14,7 +14,6 @@ export default function Page() {
       <HeroSection />
       <Features />
       <Content />
-      <Stats />
       <Testimonials />
       <Pricing />
       <FAQs />

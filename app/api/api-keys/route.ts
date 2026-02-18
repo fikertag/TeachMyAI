@@ -7,7 +7,7 @@ import dbConnect from "@/lib/mongoose";
 import { auth } from "@/lib/auth";
 import ServiceModel from "@/model/service";
 import ApiKeyModel from "@/model/apiKey";
-import { generateApiKey } from "@/lib/api-keys";
+import { decryptApiKey, encryptApiKey, generateApiKey } from "@/lib/api-keys";
 import ApiKeyUsageModel from "@/model/apiKeyUsage";
 
 export const runtime = "nodejs";
@@ -89,7 +89,7 @@ export async function GET(req: Request) {
     const keys = await ApiKeyModel.find(filter)
       .sort({ createdAt: -1 })
       .select(
-        "_id serviceId name prefix last4 rateLimitPerMinute monthlyRequestLimit revokedAt lastUsedAt createdAt updatedAt",
+        "_id serviceId name encryptedKey prefix last4 rateLimitPerMinute monthlyRequestLimit revokedAt lastUsedAt createdAt updatedAt",
       )
       .lean();
 
@@ -161,6 +161,7 @@ export async function GET(req: Request) {
           k as { serviceId: mongoose.Types.ObjectId }
         ).serviceId.toString(),
         name: (k as { name: string }).name,
+        apiKey: decryptApiKey((k as { encryptedKey?: string }).encryptedKey),
         prefix: (k as { prefix: string }).prefix,
         last4: (k as { last4: string }).last4,
         rateLimitPerMinute: (k as { rateLimitPerMinute?: number })
@@ -223,6 +224,7 @@ export async function POST(req: Request) {
     }
 
     const { apiKey, keyHash, prefix, last4 } = generateApiKey();
+    const encryptedKey = encryptApiKey(apiKey);
     const limits = getServerControlledLimits();
 
     try {
@@ -231,6 +233,7 @@ export async function POST(req: Request) {
         serviceId: serviceObjectId,
         name: body.name.trim(),
         keyHash,
+        encryptedKey,
         prefix,
         last4,
         rateLimitPerMinute: limits.rateLimitPerMinute,

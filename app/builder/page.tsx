@@ -197,11 +197,11 @@ export default function BuilderPage() {
               <CardTitle>Loading services</CardTitle>
               <CardDescription>Please wait...</CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-3">
+            <CardContent className="grid grid-cols-2 gap-3">
               {Array.from({ length: 4 }).map((_, i) => (
                 <div
                   key={i}
-                  className="h-24 animate-pulse rounded-lg border bg-background/70"
+                  className="h-30 animate-pulse rounded-lg border bg-background/70"
                 />
               ))}
             </CardContent>

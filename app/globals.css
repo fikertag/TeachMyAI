@@ -22,7 +22,7 @@ html {
   --popover: var(--color-white);
   --popover-foreground: oklch(0.3421 0.0379 61.15);
 
-  --primary: oklch(0.5967 0.0558 61.59);
+  --primary: #98785d;
   --primary-foreground: oklch(0.1448 0 0);
 
   --secondary: --alpha(var(--primary)/15%);
@@ -34,7 +34,7 @@ html {
   --accent: oklch(0.9068 0.0112 89.73);
   --accent-foreground: oklch(0.3467 0.0231 86.12);
 
-  --destructive: var(--color-red-600);
+  --destructive: var(--color-red-700);
   --destructive-foreground: var(--color-white);
 
   --border: --alpha(var(--foreground)/7.5%);

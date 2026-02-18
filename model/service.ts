@@ -23,7 +23,7 @@ const StoreSchema: Schema<IService> = new Schema(
   { timestamps: true },
 );
 
-StoreSchema.index({ ownerId: 1 }, { unique: true });
+StoreSchema.index({ ownerId: 1, createdAt: -1 });
 
 const ServiceModel: Model<IService> =
   mongoose.models.Service || mongoose.model<IService>("Service", StoreSchema);

@@ -4,6 +4,7 @@ export interface IKnowledgeDocument extends Document {
   serviceId: Types.ObjectId;
   title: string;
   source: string;
+  revokedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -18,6 +19,7 @@ const KnowledgeDocumentSchema: Schema<IKnowledgeDocument> =
       },
       title: { type: String, required: true },
       source: { type: String, default: "api" },
+      revokedAt: { type: Date, default: undefined },
     },
     { timestamps: true },
   );

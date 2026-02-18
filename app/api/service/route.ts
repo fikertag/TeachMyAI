@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import ServiceModel from "@/model/service";
 
 export const runtime = "nodejs";
+const MAX_SERVICES_PER_OWNER = 3;
 
 const CreateServiceSchema = z.object({
   name: z.string().min(1),
@@ -33,6 +34,33 @@ function slugify(value: string) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)+/g, "");
+}
+
+function isDuplicateKeyError(err: unknown) {
+  return (
+    !!err &&
+    typeof err === "object" &&
+    "code" in err &&
+    (err as { code?: number }).code === 11000
+  );
+}
+
+async function createServiceDoc(input: {
+  ownerId: mongoose.Types.ObjectId;
+  name: string;
+  slug: string;
+  description?: string;
+  systemPrompt?: string;
+  promptConfig?: Record<string, unknown>;
+}) {
+  return ServiceModel.create({
+    ownerId: input.ownerId,
+    name: input.name,
+    slug: input.slug,
+    description: input.description ?? "",
+    systemPrompt: input.systemPrompt ?? "",
+    promptConfig: input.promptConfig,
+  });
 }
 
 export async function GET() {
@@ -103,14 +131,15 @@ export async function POST(req: Request) {
     await dbConnect();
 
     const ownerObjectId = new mongoose.Types.ObjectId(userId);
+    const serviceCount = await ServiceModel.countDocuments({
+      ownerId: ownerObjectId,
+    });
 
-    const existing = await ServiceModel.findOne({ ownerId: ownerObjectId })
-      .select("_id")
-      .lean();
-
-    if (existing) {
+    if (serviceCount >= MAX_SERVICES_PER_OWNER) {
       return NextResponse.json(
-        { error: "You can only create one service" },
+        {
+          error: `Service limit reached. You can create up to ${MAX_SERVICES_PER_OWNER} services.`,
+        },
         { status: 409 },
       );
     }
@@ -121,12 +150,12 @@ export async function POST(req: Request) {
     }
 
     try {
-      const service = await ServiceModel.create({
+      const service = await createServiceDoc({
         ownerId: ownerObjectId,
         name: body.name,
         slug,
-        description: body.description ?? "",
-        systemPrompt: body.systemPrompt ?? "",
+        description: body.description,
+        systemPrompt: body.systemPrompt,
         promptConfig: body.promptConfig,
       });
 
@@ -145,18 +174,63 @@ export async function POST(req: Request) {
         { status: 201 },
       );
     } catch (err: unknown) {
-      if (
-        err &&
-        typeof err === "object" &&
-        "code" in err &&
-        (err as { code?: number }).code === 11000
-      ) {
-        return NextResponse.json(
-          { error: "Service already exists or slug is taken" },
-          { status: 409 },
-        );
+      if (!isDuplicateKeyError(err)) {
+        throw err;
       }
-      throw err;
+
+      const keyPattern =
+        err && typeof err === "object" && "keyPattern" in err
+          ? ((err as { keyPattern?: Record<string, unknown> }).keyPattern ?? {})
+          : {};
+
+      // Backward compatibility: if an old unique ownerId index still exists,
+      // remove it and retry once.
+      if ("ownerId" in keyPattern) {
+        try {
+          await ServiceModel.collection.dropIndex("ownerId_1");
+        } catch {
+          // ignore if index doesn't exist or cannot be dropped in this context
+        }
+
+        try {
+          const service = await createServiceDoc({
+            ownerId: ownerObjectId,
+            name: body.name,
+            slug,
+            description: body.description,
+            systemPrompt: body.systemPrompt,
+            promptConfig: body.promptConfig,
+          });
+
+          return NextResponse.json(
+            {
+              service: {
+                id: service._id.toString(),
+                ownerId: service.ownerId.toString(),
+                name: service.name,
+                slug: service.slug,
+                description: service.description,
+                systemPrompt: service.systemPrompt,
+                promptConfig: service.promptConfig,
+              },
+            },
+            { status: 201 },
+          );
+        } catch (retryErr: unknown) {
+          if (isDuplicateKeyError(retryErr)) {
+            return NextResponse.json(
+              { error: "Slug is already taken" },
+              { status: 409 },
+            );
+          }
+          throw retryErr;
+        }
+      }
+
+      return NextResponse.json(
+        { error: "Slug is already taken" },
+        { status: 409 },
+      );
     }
   } catch (error) {
     if (error instanceof z.ZodError) {

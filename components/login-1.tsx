@@ -67,14 +67,14 @@ export default function Login() {
   };
 
   return (
-    <section className="bg-background flex grid min-h-screen grid-rows-[auto_1fr] px-4">
-      <div className="mx-auto w-full max-w-7xl border-b py-3">
+    <section className="bg-background grid min-h-screen grid-rows-[auto_1fr] px-4">
+      <div className="mx-auto w-full max-w-7xl py-1 border-b">
         <Link
           href="/"
           aria-label="go home"
-          className="inline-block border-t-2 border-transparent py-3"
+          className="inline-block border-transparent py-3"
         >
-          <Logo className="w-fit" />
+          Teach My Ai
         </Link>
       </div>
 

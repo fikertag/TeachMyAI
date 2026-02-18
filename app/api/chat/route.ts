@@ -195,12 +195,13 @@ export async function POST(req: NextRequest) {
     // 1️⃣ Embed question
     const emb = await embedTextGemini({ contents: [message] });
     const vector = emb?.[0]?.values;
+    console.log("Query embedding:", vector);
 
     if (!vector)
       return NextResponse.json({ error: "Embedding failed" }, { status: 500 });
 
     // 2️⃣ Vector search
-    const chunks = await RagChunks.aggregate<ChunkHit>([
+    const chunks = await RagChunks.aggregate([
       {
         $vectorSearch: {
           queryVector: vector,
@@ -219,7 +220,7 @@ export async function POST(req: NextRequest) {
         },
       },
     ]);
-
+    console.log("Retrieved chunks:", chunks);
     // 3️⃣ Build retrieved context
     const context = chunks
       .map((c, i) => `Source ${i + 1}:\n${c.chunkText}`)
@@ -245,9 +246,15 @@ export async function POST(req: NextRequest) {
       ...(servicePromptConfig ?? {}),
     };
 
+    const promptConfigInstruction =
+      servicePromptConfig && typeof servicePromptConfig === "object"
+        ? (servicePromptConfig as { instruction?: unknown }).instruction
+        : undefined;
+
     const mergedInstruction =
-      typeof cfgMerged.instruction === "string" && cfgMerged.instruction.trim()
-        ? cfgMerged.instruction
+      typeof promptConfigInstruction === "string" &&
+      promptConfigInstruction.trim()
+        ? promptConfigInstruction
         : systemPrompt
           ? systemPrompt
           : cfgBase.instruction;

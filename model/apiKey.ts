@@ -5,6 +5,7 @@ interface IApiKey extends Document {
   serviceId: Types.ObjectId;
   ownerId: Types.ObjectId;
   keyHash: string;
+  encryptedKey?: string;
   prefix: string;
   last4: string;
   rateLimitPerMinute?: number;
@@ -20,6 +21,7 @@ const ApiKeySchema: Schema<IApiKey> = new Schema(
     serviceId: { type: Schema.Types.ObjectId, ref: "Service", required: true },
     ownerId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     keyHash: { type: String, required: true, unique: true },
+    encryptedKey: { type: String, default: undefined },
     name: { type: String, required: true },
     prefix: { type: String, required: true },
     last4: { type: String, required: true },
