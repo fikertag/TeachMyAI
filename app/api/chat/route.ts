@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 import dbConnect from "@/lib/mongoose";
 import RagChunks from "@/model/KnowladgeChunks";
 import ServiceModel from "@/model/service";
+import { decryptApiKey } from "@/lib/api-keys";
 import { embedTextGemini } from "@/lib/aiUtils/embed";
 import { buildPromptFromConfig } from "@/lib/aiUtils/promptBuilder";
 import { rga_ethify_cfg } from "@/lib/aiUtils/promots";
@@ -208,7 +209,9 @@ export async function POST(req: NextRequest) {
 
     const service = serviceObjectId
       ? await ServiceModel.findById(serviceObjectId)
-          .select("systemPrompt promptConfig allowedOrigins")
+          .select(
+            "systemPrompt promptConfig allowedOrigins geminiApiKeyEncrypted",
+          )
           .lean()
       : null;
 
@@ -259,7 +262,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const serviceGeminiApiKey = decryptApiKey(
+      (service as { geminiApiKeyEncrypted?: string }).geminiApiKeyEncrypted,
+    );
+
+    const apiKey = serviceGeminiApiKey || process.env.GEMINI_API_KEY;
 
     if (!apiKey)
       return NextResponse.json({ error: "AI key missing" }, { status: 500 });
@@ -271,7 +278,7 @@ export async function POST(req: NextRequest) {
     });
 
     // 1️⃣ Embed question
-    const emb = await embedTextGemini({ contents: [message] });
+    const emb = await embedTextGemini({ contents: [message], apiKey });
     const vector = emb?.[0]?.values;
 
     if (!vector)

@@ -26,12 +26,20 @@ function base64Url(bytes: Buffer) {
 }
 
 function getApiKeyEncryptionSecret() {
-  return (
+  const secret =
     process.env.API_KEY_ENCRYPTION_SECRET ||
     process.env.BETTER_AUTH_SECRET ||
-    process.env.AUTH_SECRET ||
-    "teachmyai-dev-api-key-secret"
-  );
+    process.env.AUTH_SECRET;
+
+  if (secret && secret.trim()) {
+    return secret;
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("Missing API key encryption secret");
+  }
+
+  return "teachmyai-dev-api-key-secret";
 }
 
 function getApiKeyEncryptionKey() {

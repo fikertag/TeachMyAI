@@ -7,6 +7,9 @@ interface IService extends Document {
   description: string;
   systemPrompt: string;
   allowedOrigins?: string[];
+  geminiApiKeyEncrypted?: string;
+  geminiApiKeyLast4?: string;
+  geminiApiKeyUpdatedAt?: Date;
   promptConfig?: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
@@ -20,6 +23,9 @@ const StoreSchema: Schema<IService> = new Schema(
     description: { type: String, default: "" },
     systemPrompt: { type: String, default: "" },
     allowedOrigins: { type: [String], default: [] },
+    geminiApiKeyEncrypted: { type: String, default: undefined },
+    geminiApiKeyLast4: { type: String, default: undefined },
+    geminiApiKeyUpdatedAt: { type: Date, default: undefined },
     promptConfig: { type: Schema.Types.Mixed, default: undefined },
   },
   { timestamps: true },

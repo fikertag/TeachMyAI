@@ -2,9 +2,10 @@ import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { z } from "zod";
-
+// import { GoogleGenAI } from "@google/genai";
 import dbConnect from "@/lib/mongoose";
 import { auth } from "@/lib/auth";
+import { encryptApiKey } from "@/lib/api-keys";
 import ServiceModel from "@/model/service";
 import ApiKeyModel from "@/model/apiKey";
 import ApiKeyUsageModel from "@/model/apiKeyUsage";
@@ -19,6 +20,7 @@ const UpdateServiceSchema = z
     description: z.string().max(2000).optional(),
     systemPrompt: z.string().max(20000).optional(),
     allowedOrigins: z.array(z.string().min(1).max(300)).max(50).optional(),
+    geminiApiKey: z.string().min(20).max(300).optional().nullable(),
     promptConfig: z
       .object({
         role: z.string().optional(),
@@ -40,6 +42,14 @@ const UpdateServiceSchema = z
     (v) => Object.keys(v).length > 0,
     "At least one field must be provided",
   );
+
+// async function verifyGeminiApiKey(apiKey: string) {
+//   const ai = new GoogleGenAI({ apiKey });
+//   await ai.models.generateContent({
+//     model: "gemini-2.0-flash",
+//     contents: "ping",
+//   });
+// }
 
 function requireObjectId(id: string, label: string) {
   if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -101,6 +111,7 @@ export async function PATCH(
     await dbConnect();
 
     const update: Record<string, unknown> = {};
+    const unset: Record<string, 1> = {};
 
     if (typeof body.slug === "string") {
       const slug = slugify(body.slug);
@@ -122,15 +133,43 @@ export async function PATCH(
       update.allowedOrigins = body.allowedOrigins;
     }
 
+    if (body.geminiApiKey !== undefined) {
+      if (body.geminiApiKey === null) {
+        unset.geminiApiKeyEncrypted = 1;
+        unset.geminiApiKeyLast4 = 1;
+        unset.geminiApiKeyUpdatedAt = 1;
+      } else {
+        const trimmed = body.geminiApiKey.trim();
+        if (!trimmed) {
+          return NextResponse.json(
+            { error: "Gemini API key cannot be empty" },
+            { status: 400 },
+          );
+        }
+        // await verifyGeminiApiKey(trimmed);
+        update.geminiApiKeyEncrypted = encryptApiKey(trimmed);
+        update.geminiApiKeyLast4 = trimmed.slice(-4);
+        update.geminiApiKeyUpdatedAt = new Date();
+      }
+    }
+
     if (body.promptConfig !== undefined) {
       update.promptConfig = body.promptConfig;
     }
 
     try {
+      const updateQuery: {
+        $set?: Record<string, unknown>;
+        $unset?: Record<string, 1>;
+      } = {};
+
+      if (Object.keys(update).length > 0) updateQuery.$set = update;
+      if (Object.keys(unset).length > 0) updateQuery.$unset = unset;
+
       const updated = await ServiceModel.findOneAndUpdate(
         { _id: serviceObjectId, ownerId: authRes.ownerObjectId },
-        { $set: update },
-        { new: true },
+        updateQuery,
+        { new: true, strict: false },
       ).lean();
 
       if (!updated) {
@@ -152,6 +191,22 @@ export async function PATCH(
           )
             ? ((updated as { allowedOrigins: string[] }).allowedOrigins ?? [])
             : [],
+          hasGeminiApiKey:
+            (typeof (updated as { geminiApiKeyEncrypted?: unknown })
+              .geminiApiKeyEncrypted === "string" &&
+              Boolean(
+                (updated as { geminiApiKeyEncrypted?: string })
+                  .geminiApiKeyEncrypted,
+              )) ||
+            Boolean(
+              (updated as { geminiApiKeyLast4?: string }).geminiApiKeyLast4,
+            ),
+          geminiApiKeyLast4:
+            (updated as { geminiApiKeyLast4?: string }).geminiApiKeyLast4 ??
+            null,
+          geminiApiKeyUpdatedAt:
+            (updated as { geminiApiKeyUpdatedAt?: Date })
+              .geminiApiKeyUpdatedAt ?? null,
           promptConfig: (updated as { promptConfig?: unknown }).promptConfig,
           createdAt: updated.createdAt,
           updatedAt: updated.updatedAt,
@@ -175,7 +230,6 @@ export async function PATCH(
         { status: 400 },
       );
     }
-
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });
   }

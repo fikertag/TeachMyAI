@@ -100,6 +100,16 @@ export async function GET() {
         description: s.description,
         systemPrompt: s.systemPrompt,
         allowedOrigins: Array.isArray(s.allowedOrigins) ? s.allowedOrigins : [],
+        hasGeminiApiKey:
+          typeof (s as { geminiApiKeyEncrypted?: unknown })
+            .geminiApiKeyEncrypted === "string" &&
+          Boolean(
+            (s as { geminiApiKeyEncrypted?: string }).geminiApiKeyEncrypted,
+          ),
+        geminiApiKeyLast4:
+          (s as { geminiApiKeyLast4?: string }).geminiApiKeyLast4 ?? null,
+        geminiApiKeyUpdatedAt:
+          (s as { geminiApiKeyUpdatedAt?: Date }).geminiApiKeyUpdatedAt ?? null,
         promptConfig: s.promptConfig,
         createdAt: s.createdAt,
         updatedAt: s.updatedAt,
@@ -176,6 +186,11 @@ export async function POST(req: Request) {
             allowedOrigins: Array.isArray(service.allowedOrigins)
               ? service.allowedOrigins
               : [],
+            hasGeminiApiKey:
+              typeof service.geminiApiKeyEncrypted === "string" &&
+              Boolean(service.geminiApiKeyEncrypted),
+            geminiApiKeyLast4: service.geminiApiKeyLast4 ?? null,
+            geminiApiKeyUpdatedAt: service.geminiApiKeyUpdatedAt ?? null,
             promptConfig: service.promptConfig,
           },
         },
@@ -223,6 +238,11 @@ export async function POST(req: Request) {
                 allowedOrigins: Array.isArray(service.allowedOrigins)
                   ? service.allowedOrigins
                   : [],
+                hasGeminiApiKey:
+                  typeof service.geminiApiKeyEncrypted === "string" &&
+                  Boolean(service.geminiApiKeyEncrypted),
+                geminiApiKeyLast4: service.geminiApiKeyLast4 ?? null,
+                geminiApiKeyUpdatedAt: service.geminiApiKeyUpdatedAt ?? null,
                 promptConfig: service.promptConfig,
               },
             },

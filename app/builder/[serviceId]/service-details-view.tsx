@@ -45,6 +45,9 @@ type Service = {
   description: string;
   systemPrompt?: string;
   allowedOrigins?: string[];
+  hasGeminiApiKey?: boolean;
+  geminiApiKeyLast4?: string | null;
+  geminiApiKeyUpdatedAt?: string | null;
   promptConfig?: Record<string, unknown>;
 };
 
@@ -199,6 +202,8 @@ export default function ServiceDetailsView({
   const [embedOriginsDraft, setEmbedOriginsDraft] = useState("");
   const [embedOriginInput, setEmbedOriginInput] = useState("");
   const [isSavingEmbedOrigins, setIsSavingEmbedOrigins] = useState(false);
+  const [geminiApiKeyDraft, setGeminiApiKeyDraft] = useState("");
+  const [isSavingGeminiApiKey, setIsSavingGeminiApiKey] = useState(false);
 
   const [knowledgeDocs, setKnowledgeDocs] = useState<KnowledgeDocument[]>([]);
   const [isLoadingKnowledge, setIsLoadingKnowledge] = useState(false);
@@ -494,6 +499,12 @@ export default function ServiceDetailsView({
           systemPrompt: data.service?.systemPrompt ?? prev.systemPrompt,
           allowedOrigins:
             data.service?.allowedOrigins ?? prev.allowedOrigins ?? [],
+          hasGeminiApiKey:
+            data.service?.hasGeminiApiKey ?? prev.hasGeminiApiKey,
+          geminiApiKeyLast4:
+            data.service?.geminiApiKeyLast4 ?? prev.geminiApiKeyLast4,
+          geminiApiKeyUpdatedAt:
+            data.service?.geminiApiKeyUpdatedAt ?? prev.geminiApiKeyUpdatedAt,
           promptConfig: data.service?.promptConfig ?? prev.promptConfig,
         };
       });
@@ -555,6 +566,98 @@ export default function ServiceDetailsView({
       setError(e instanceof Error ? e.message : "Failed to save origins");
     } finally {
       setIsSavingEmbedOrigins(false);
+    }
+  };
+
+  const saveGeminiApiKey = async () => {
+    if (!service?.id) return;
+
+    setError("");
+    setSuccess("");
+    const payload = geminiApiKeyDraft.trim();
+    if (!payload) {
+      setError("Enter a Gemini API key or use Remove key");
+      return;
+    }
+    setIsSavingGeminiApiKey(true);
+
+    try {
+      const res = await fetch(`/api/service/${service.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          geminiApiKey: payload,
+        }),
+      });
+
+      const data = (await res.json()) as { service?: Service; error?: string };
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to save Gemini API key");
+      }
+
+      setService((prev) =>
+        prev
+          ? {
+              ...prev,
+              hasGeminiApiKey: data.service?.hasGeminiApiKey ?? true,
+              geminiApiKeyLast4:
+                data.service?.geminiApiKeyLast4 ?? prev.geminiApiKeyLast4,
+              geminiApiKeyUpdatedAt:
+                data.service?.geminiApiKeyUpdatedAt ??
+                prev.geminiApiKeyUpdatedAt,
+            }
+          : prev,
+      );
+
+      setGeminiApiKeyDraft("");
+      setSuccess("Gemini API key saved");
+    } catch (e: unknown) {
+      setError(
+        e instanceof Error ? e.message : "Failed to save Gemini API key",
+      );
+    } finally {
+      setIsSavingGeminiApiKey(false);
+    }
+  };
+
+  const removeGeminiApiKey = async () => {
+    if (!service?.id) return;
+
+    setError("");
+    setSuccess("");
+    setIsSavingGeminiApiKey(true);
+
+    try {
+      const res = await fetch(`/api/service/${service.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ geminiApiKey: null }),
+      });
+
+      const data = (await res.json()) as { service?: Service; error?: string };
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to remove Gemini API key");
+      }
+
+      setService((prev) =>
+        prev
+          ? {
+              ...prev,
+              hasGeminiApiKey: false,
+              geminiApiKeyLast4: null,
+              geminiApiKeyUpdatedAt: null,
+            }
+          : prev,
+      );
+      setGeminiApiKeyDraft("");
+      setSuccess("Gemini API key removed");
+    } catch (e: unknown) {
+      setError(
+        e instanceof Error ? e.message : "Failed to remove Gemini API key",
+      );
+    } finally {
+      setIsSavingGeminiApiKey(false);
     }
   };
 
@@ -1397,6 +1500,89 @@ export default function ServiceDetailsView({
                       </div>
                     ) : null}
 
+                    <div className="rounded-md border bg-muted/20 p-4">
+                      <div className="mb-3 flex items-center justify-between gap-2">
+                        <div>
+                          <p className="font-semibold">External Model Keys</p>
+                          <p className="text-xs text-muted-foreground">
+                            Configure how your service connects to AI models.
+                            These keys belong to the service owner and are used
+                            to fulfill completions.
+                          </p>
+                        </div>
+                        <span
+                          className={`text-xs font-medium ${service?.hasGeminiApiKey ? "text-green-600" : "text-muted-foreground"}`}
+                        >
+                          {service?.hasGeminiApiKey ? "Connected" : "Not set"}
+                        </span>
+                      </div>
+
+                      <div className="rounded-md border bg-background p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-medium">Google Gemini</p>
+                            <p className="text-xs text-muted-foreground">
+                              {service?.hasGeminiApiKey
+                                ? `Key ending in ${service.geminiApiKeyLast4 ?? "****"}`
+                                : "No custom key saved. Using platform default."}
+                            </p>
+                            {service?.geminiApiKeyUpdatedAt ? (
+                              <p className="mt-1 text-[10px] text-muted-foreground">
+                                Updated:{" "}
+                                {new Date(
+                                  service.geminiApiKeyUpdatedAt,
+                                ).toLocaleString()}
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+
+                        <div className="mt-4 border-t pt-3">
+                          <Label
+                            htmlFor="gemini-key-input-manage"
+                            className="text-xs font-medium"
+                          >
+                            {service?.hasGeminiApiKey
+                              ? "Update Gemini API key"
+                              : "Add Gemini API key (optional)"}
+                          </Label>
+                          <Input
+                            id="gemini-key-input-manage"
+                            type="password"
+                            value={geminiApiKeyDraft}
+                            onChange={(e) =>
+                              setGeminiApiKeyDraft(e.target.value)
+                            }
+                            placeholder="AIza..."
+                            className="mt-1.5 bg-background shadow-xs"
+                          />
+
+                          <div className="mt-3 flex flex-wrap items-center gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() => void saveGeminiApiKey()}
+                              disabled={isSavingGeminiApiKey}
+                              className="text-white"
+                            >
+                              {isSavingGeminiApiKey ? "Saving..." : "Save key"}
+                            </Button>
+                            {service?.hasGeminiApiKey && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => void removeGeminiApiKey()}
+                                disabled={isSavingGeminiApiKey}
+                              >
+                                Remove key
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="flex flex-wrap gap-2">
                       <Button
                         type="button"
@@ -1554,6 +1740,15 @@ export default function ServiceDetailsView({
                           </form>
                         </DialogContent>
                       </Dialog>
+                    </div>
+
+                    <div className="rounded-md border bg-muted/20 p-4">
+                      <p className="font-semibold">Service Access Keys</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Use these keys to authenticate your requests when
+                        calling this service via the API. These are separate
+                        from your AI model provider keys.
+                      </p>
                     </div>
 
                     {isLoadingKeys ? (
