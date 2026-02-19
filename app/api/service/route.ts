@@ -98,6 +98,7 @@ export async function GET() {
         name: s.name,
         slug: s.slug,
         description: s.description,
+        color: s.color,
         systemPrompt: s.systemPrompt,
         allowedOrigins: Array.isArray(s.allowedOrigins) ? s.allowedOrigins : [],
         hasGeminiApiKey:

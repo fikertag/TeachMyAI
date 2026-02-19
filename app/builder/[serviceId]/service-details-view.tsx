@@ -35,7 +35,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Code2, Copy, ExternalLink, Link2, MoveLeft, X } from "lucide-react";
+import {
+  Code2,
+  Copy,
+  ExternalLink,
+  Link2,
+  MoveLeft,
+  Palette,
+  X,
+} from "lucide-react";
 import { rga_ethify_cfg } from "@/lib/aiUtils/promots";
 
 type Service = {
@@ -191,6 +199,7 @@ export default function ServiceDetailsView({
   const [serviceSlugDraft, setServiceSlugDraft] = useState("");
   const [serviceDescriptionDraft, setServiceDescriptionDraft] = useState("");
   const [serviceSystemPromptDraft, setServiceSystemPromptDraft] = useState("");
+  const [serviceColorDraft, setServiceColorDraft] = useState("");
   const [isEditingSystemPrompt, setIsEditingSystemPrompt] = useState(false);
   const [systemPromptEditorMode, setSystemPromptEditorMode] = useState<
     "text" | "builder"
@@ -329,6 +338,7 @@ export default function ServiceDetailsView({
       setServiceSlugDraft(found.slug ?? "");
       setServiceDescriptionDraft(found.description ?? "");
       setServiceSystemPromptDraft(found.systemPrompt ?? "");
+      setServiceColorDraft(found.color ?? "#ffffff");
       setEmbedOriginsDraft((found.allowedOrigins ?? []).join("\n"));
       setPromptBuilderDraft(toPromptConfigDraft(found.promptConfig));
       setSystemPromptEditorMode(found.promptConfig ? "builder" : "text");
@@ -448,6 +458,10 @@ export default function ServiceDetailsView({
       patch.description = serviceDescriptionDraft;
     }
 
+    if (serviceColorDraft !== (service.color ?? "#ffffff")) {
+      patch.color = serviceColorDraft;
+    }
+
     if (
       systemPromptEditorMode === "text" &&
       serviceSystemPromptDraft !== (service.systemPrompt ?? "")
@@ -496,6 +510,7 @@ export default function ServiceDetailsView({
           ...prev,
           slug: data.service?.slug ?? prev.slug,
           description: data.service?.description ?? prev.description,
+          color: data.service?.color ?? prev.color,
           systemPrompt: data.service?.systemPrompt ?? prev.systemPrompt,
           allowedOrigins:
             data.service?.allowedOrigins ?? prev.allowedOrigins ?? [],
@@ -983,6 +998,13 @@ export default function ServiceDetailsView({
                 <TabsTrigger className="cursor-pointer" value="manage">
                   Edit & Manage
                 </TabsTrigger>
+                <TabsTrigger
+                  className="cursor-pointer flex items-center"
+                  value="appearance"
+                >
+                  <Palette className="h-4 w-4 mr-1" />
+                  Appearance
+                </TabsTrigger>
                 <TabsTrigger className="cursor-pointer" value="api">
                   API
                 </TabsTrigger>
@@ -1261,21 +1283,22 @@ export default function ServiceDetailsView({
                           </Button>
                         )}
                       </div>
-
-                      <div className="rounded-md border bg-background p-4">
-                        {isUsingDefaultSystemPrompt ? (
-                          <p className="mb-2 text-xs font-medium text-muted-foreground">
-                            Using default prompt
+                      {isEditingSystemPrompt ? null : (
+                        <div className="rounded-md border bg-background p-4">
+                          {isUsingDefaultSystemPrompt ? (
+                            <p className="mb-2 text-xs font-medium text-muted-foreground">
+                              Using default prompt
+                            </p>
+                          ) : null}
+                          <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+                            {displayedSystemPrompt}
                           </p>
-                        ) : null}
-                        <p className="whitespace-pre-wrap text-sm text-muted-foreground">
-                          {displayedSystemPrompt}
-                        </p>
-                      </div>
+                        </div>
+                      )}
                     </div>
 
                     {isEditingSystemPrompt ? (
-                      <div className="grid gap-4 rounded-md border bg-muted/20 p-4">
+                      <div className="grid gap-4 rounded-md bg-muted/20 px-2">
                         <div className="flex flex-wrap gap-2">
                           <Button
                             type="button"
@@ -1324,6 +1347,7 @@ export default function ServiceDetailsView({
                             ) : null}
                             <Textarea
                               id="service-system-prompt"
+                              autoFocus
                               value={
                                 isUsingDefaultSystemPrompt
                                   ? defaultSystemPromptText
@@ -1338,8 +1362,8 @@ export default function ServiceDetailsView({
                             />
                           </div>
                         ) : (
-                          <div className="grid gap-3">
-                            <div className="grid gap-2">
+                          <div className="grid gap-3 border p-4 rounded-2xl">
+                            <div className="grid gap-2 ">
                               <Label htmlFor="pb-role">Role</Label>
                               <Input
                                 id="pb-role"
@@ -1500,7 +1524,7 @@ export default function ServiceDetailsView({
                       </div>
                     ) : null}
 
-                    <div className="rounded-md border bg-muted/20 p-4">
+                    <div className="rounded-md bg-muted/20 ">
                       <div className="mb-3 flex items-center justify-between gap-2">
                         <div>
                           <p className="font-semibold">External Model Keys</p>
@@ -1623,6 +1647,62 @@ export default function ServiceDetailsView({
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="appearance" className="mt-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Appearance</CardTitle>
+                    <CardDescription>
+                      Customize the visual appearance of your service.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="service-color">Color</Label>
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-12 h-10 rounded-md border-2 border-border cursor-pointer relative overflow-hidden"
+                          style={{ backgroundColor: serviceColorDraft }}
+                          onClick={() =>
+                            document.getElementById("service-color")?.click()
+                          }
+                        >
+                          <input
+                            id="service-color"
+                            type="color"
+                            value={serviceColorDraft}
+                            onChange={(e) =>
+                              setServiceColorDraft(e.target.value)
+                            }
+                            disabled={isSavingService || isDeletingService}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-sm font-mono text-muted-foreground bg-muted px-3 py-2 rounded-md border">
+                            {serviceColorDraft.toUpperCase()}
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Click the color square to open the color picker. This
+                        color will be used in the chat interface.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        className="text-white"
+                        onClick={() => void saveService()}
+                        disabled={isSavingService || isDeletingService}
+                      >
+                        {isSavingService ? "Saving..." : "Save changes"}
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>

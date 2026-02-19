@@ -24,6 +24,7 @@ type Service = {
   name: string;
   slug: string;
   description?: string;
+  color?: string;
 };
 
 type ChatMessage = {
@@ -266,7 +267,7 @@ export default function ChatClient({ slug }: { slug: string }) {
   };
 
   return (
-    <div className="h-svh">
+    <div className="h-svh ">
       <div className="mx-auto flex h-svh w-full max-w-4xl flex-col px-4 pb-6 pt-4 sm:px-6 ">
         <Card className="flex h-full min-h-0 flex-1 flex-col border-0 bg-transparent -my-6">
           <CardHeader>
@@ -284,7 +285,10 @@ export default function ChatClient({ slug }: { slug: string }) {
                 {messages.length === 0 ? (
                   <div className="flex h-full flex-col justify-center my-auto pb-20 gap-6">
                     <div className="space-y-2 flex flex-col items-center">
-                      <h2 className="text-4xl capitalize font-semibold text-foreground">
+                      <h2
+                        className="text-4xl capitalize font-semibold text-foreground "
+                        style={{ color: service?.color }}
+                      >
                         {service?.name ?? "Start Chating"}
                       </h2>
                       <p className=" text-muted-foreground">
@@ -305,7 +309,10 @@ export default function ChatClient({ slug }: { slug: string }) {
                           }}
                         >
                           <CardHeader className="pb-2">
-                            <CardTitle className="text-sm">
+                            <CardTitle
+                              className="text-sm"
+                              style={{ color: service?.color }}
+                            >
                               {prompt.title}
                             </CardTitle>
                           </CardHeader>
@@ -340,6 +347,12 @@ export default function ChatClient({ slug }: { slug: string }) {
                               ? "bg-accent text-primary-foreground"
                               : "bg-accent/20 text-secondary-foreground"
                           }`}
+                          style={{
+                            backgroundColor:
+                              m.role === "user"
+                                ? service?.color + "80"
+                                : service?.color + "20",
+                          }}
                         >
                           <p className="whitespace-pre-wrap">{m.content}</p>
                           {m.role === "assistant" ? (
@@ -405,7 +418,10 @@ export default function ChatClient({ slug }: { slug: string }) {
 
             <div className="sticky bottom-0 z-10 bg-background/95  backdrop-blur">
               <div className="mx-auto w-full max-w-4xl px-4 py-4">
-                <InputGroup className="h-12 rounded-xl border-primary bg-background shadow-md transition-shadow focus-within:shadow-lg">
+                <InputGroup
+                  className="h-12 rounded-xl border-primary bg-background shadow-md transition-shadow focus-within:shadow-lg"
+                  style={{ borderTopColor: service?.color }}
+                >
                   <InputGroupInput
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
@@ -422,6 +438,10 @@ export default function ChatClient({ slug }: { slug: string }) {
                   />
                   <InputGroupAddon align="inline-end" className="pr-2">
                     <InputGroupButton
+                      style={{
+                        backgroundColor: service?.color + "33",
+                        borderRadius: "10px",
+                      }}
                       type="button"
                       onClick={() => void sendMessage()}
                       disabled={
@@ -432,7 +452,10 @@ export default function ChatClient({ slug }: { slug: string }) {
                       }
                       size="sm"
                     >
-                      <SendHorizontal color="#98785d" className="h-10" />
+                      <SendHorizontal
+                        color={service?.color || "#98785d"}
+                        className="h-10"
+                      />
                     </InputGroupButton>
                   </InputGroupAddon>
                 </InputGroup>

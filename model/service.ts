@@ -11,6 +11,7 @@ interface IService extends Document {
   geminiApiKeyLast4?: string;
   geminiApiKeyUpdatedAt?: Date;
   promptConfig?: Record<string, unknown>;
+  color?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,6 +28,7 @@ const StoreSchema: Schema<IService> = new Schema(
     geminiApiKeyLast4: { type: String, default: undefined },
     geminiApiKeyUpdatedAt: { type: Date, default: undefined },
     promptConfig: { type: Schema.Types.Mixed, default: undefined },
+    color: { type: String },
   },
   { timestamps: true },
 );

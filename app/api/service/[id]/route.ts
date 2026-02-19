@@ -18,6 +18,10 @@ const UpdateServiceSchema = z
   .object({
     slug: z.string().min(1).max(80).optional(),
     description: z.string().max(2000).optional(),
+    color: z
+      .string()
+      .regex(/^#[0-9A-Fa-f]{6}$/)
+      .optional(),
     systemPrompt: z.string().max(20000).optional(),
     allowedOrigins: z.array(z.string().min(1).max(300)).max(50).optional(),
     geminiApiKey: z.string().min(20).max(300).optional().nullable(),
@@ -125,6 +129,10 @@ export async function PATCH(
       update.description = body.description;
     }
 
+    if (typeof body.color === "string") {
+      update.color = body.color;
+    }
+
     if (typeof body.systemPrompt === "string") {
       update.systemPrompt = body.systemPrompt;
     }
@@ -185,6 +193,7 @@ export async function PATCH(
           name: (updated as { name: string }).name,
           slug: (updated as { slug: string }).slug,
           description: (updated as { description: string }).description,
+          color: (updated as { color?: string }).color,
           systemPrompt: (updated as { systemPrompt: string }).systemPrompt,
           allowedOrigins: Array.isArray(
             (updated as { allowedOrigins?: unknown }).allowedOrigins,
