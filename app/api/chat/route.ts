@@ -244,6 +244,8 @@ export async function POST(req: NextRequest) {
         originFromReferrer(req.headers.get("origin") ?? "") ??
         originFromReferrer(req.headers.get("referer") ?? "") ??
         originFromReferrer(embedReferrer);
+      console.log("Request origin:", requestOrigin);
+      console.log("Allowed origins:", normalizedAllowedOrigins);
 
       if (
         !requestOrigin ||
