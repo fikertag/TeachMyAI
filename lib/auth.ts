@@ -6,7 +6,7 @@ import { getMongoDb } from "@/lib/mongodb";
 const db = await getMongoDb();
 
 export const auth = betterAuth({
-  trustedOrigins: ["http://localhost:3000"],
+  trustedOrigins: ["http://localhost:3000", "https://teach-my-ai.vercel.app"],
   database: mongodbAdapter(db),
   emailAndPassword: {
     enabled: true,
