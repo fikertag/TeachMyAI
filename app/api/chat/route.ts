@@ -241,11 +241,9 @@ export async function POST(req: NextRequest) {
       }
 
       const requestOrigin =
-        originFromReferrer(req.headers.get("origin") ?? "") ??
+        originFromReferrer(embedReferrer) ??
         originFromReferrer(req.headers.get("referer") ?? "") ??
-        originFromReferrer(embedReferrer);
-      console.log("Request origin:", requestOrigin);
-      console.log("Allowed origins:", normalizedAllowedOrigins);
+        originFromReferrer(req.headers.get("origin") ?? "");
 
       if (
         !requestOrigin ||
@@ -286,12 +284,12 @@ export async function POST(req: NextRequest) {
             $vectorSearch: {
               queryVector: vector,
               index: "rga_index",
+              filter: { serviceId: serviceObjectId },
               path: "embedding",
               numCandidates: 50,
               limit: 5,
             },
           },
-          { $match: { serviceId: serviceObjectId } },
           {
             $project: {
               _id: 0,
