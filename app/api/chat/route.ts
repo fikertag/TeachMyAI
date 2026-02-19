@@ -286,9 +286,6 @@ export async function POST(req: NextRequest) {
               index: "rga_index",
               path: "embedding",
               numCandidates: 50,
-              filter: {
-                serviceId: { $eq: serviceObjectId },
-              },
               limit: 5,
             },
           },
