@@ -8,16 +8,11 @@ import ServiceModel from "@/model/service";
 import { embedTextGemini } from "@/lib/aiUtils/embed";
 import { buildPromptFromConfig } from "@/lib/aiUtils/promptBuilder";
 import { rga_ethify_cfg } from "@/lib/aiUtils/promots";
-import { auth } from "@/lib/auth";
-import { headers as nextHeaders } from "next/headers";
-import {
-  authenticateAndConsumeApiKey,
-  getApiKeyFromHeaders,
-} from "@/lib/api-keys";
 
 const LegacySchema = z.object({
   message: z.string().min(1),
   serviceId: z.string().min(1),
+  embedReferrer: z.string().optional(),
   history: z
     .array(
       z.object({
@@ -30,6 +25,7 @@ const LegacySchema = z.object({
 
 const MessagesSchema = z.object({
   serviceId: z.string().min(1).optional(),
+  embedReferrer: z.string().optional(),
   messages: z
     .array(
       z.object({
@@ -50,6 +46,89 @@ type ChunkHit = {
   chunkText: string;
   score: number;
 };
+
+function normalizeAllowedOrigin(input: string): string | null {
+  const trimmed = input.trim().toLowerCase();
+  if (!trimmed) return null;
+
+  if (trimmed.startsWith("*\.")) {
+    const bareHost = trimmed.slice(2).trim();
+    if (!bareHost) return null;
+    return `*.${bareHost}`;
+  }
+
+  try {
+    const parsed = new URL(
+      trimmed.includes("://") ? trimmed : `https://${trimmed}`,
+    );
+    if (!parsed.hostname) return null;
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:")
+      return null;
+    return `${parsed.protocol}//${parsed.host}`.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+function originFromReferrer(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return null;
+    }
+    return `${parsed.protocol}//${parsed.host}`.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+function hostFromOrigin(origin: string): string {
+  try {
+    return new URL(origin).hostname.toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+function isAllowedOrigin(origin: string, allowedOrigins: string[]): boolean {
+  const normalizedOrigin = origin.toLowerCase();
+  const hostname = hostFromOrigin(normalizedOrigin);
+  if (!hostname) return false;
+
+  return allowedOrigins.some((item) => {
+    const allowed = normalizeAllowedOrigin(item);
+    if (!allowed) return false;
+
+    if (allowed.startsWith("*.")) {
+      const bare = allowed.slice(2);
+      return hostname === bare || hostname.endsWith(`.${bare}`);
+    }
+
+    return allowed === normalizedOrigin;
+  });
+}
+
+function parseUrl(value: string): URL | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  try {
+    return new URL(trimmed);
+  } catch {
+    return null;
+  }
+}
+
+function isEmbedRequest(req: NextRequest, embedReferrer: string): boolean {
+  const refererUrl = parseUrl(req.headers.get("referer") ?? "");
+  if (refererUrl?.pathname.startsWith("/embed/chat")) return true;
+
+  const bodyReferrerUrl = parseUrl(embedReferrer);
+  if (bodyReferrerUrl?.pathname.startsWith("/embed/chat")) return true;
+
+  return false;
+}
 
 function msgToText(message: unknown): string {
   if (message == null) return "";
@@ -79,8 +158,10 @@ export async function POST(req: NextRequest) {
     await dbConnect();
 
     const body: RequestBody = Schema.parse(await req.json());
+
     let message: string;
     let requestedServiceId: string | undefined;
+    let embedReferrer = "";
     let history: { role: "user" | "assistant"; content: string }[];
 
     if ("messages" in body) {
@@ -89,12 +170,14 @@ export async function POST(req: NextRequest) {
         .find((m) => m.role === "user");
       message = (lastUser ?? body.messages[body.messages.length - 1]).content;
       requestedServiceId = body.serviceId;
+      embedReferrer = body.embedReferrer ?? "";
       history = body.messages
         .slice(-6)
         .map((m) => ({ role: m.role, content: m.content }));
     } else {
       message = body.message;
       requestedServiceId = body.serviceId;
+      embedReferrer = body.embedReferrer ?? "";
       history = body.history ?? [];
     }
 
@@ -103,83 +186,78 @@ export async function POST(req: NextRequest) {
         ? requestedServiceId.trim()
         : undefined;
 
-    const apiKeyHeader = getApiKeyFromHeaders(req.headers);
+    const resolvedServiceId: string | undefined = serviceIdFromBody;
 
-    let resolvedServiceId: string | undefined = serviceIdFromBody;
-
-    if (apiKeyHeader) {
-      const res = await authenticateAndConsumeApiKey({ apiKey: apiKeyHeader });
-      if (!res.ok) {
-        return NextResponse.json({ error: res.error }, { status: res.status });
-      }
-
-      resolvedServiceId = resolvedServiceId ?? res.serviceId;
-
-      if (resolvedServiceId !== res.serviceId) {
-        return NextResponse.json(
-          { error: "API key not allowed for this service" },
-          { status: 403 },
-        );
-      }
-    } else {
-      if (!resolvedServiceId) {
-        return NextResponse.json(
-          { error: "serviceId is required" },
-          { status: 400 },
-        );
-      }
-
-      const session = await auth.api.getSession({
-        headers: await nextHeaders(),
-      });
-
-      const userId = session?.user?.id;
-      if (!userId) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-
-      if (!mongoose.Types.ObjectId.isValid(userId)) {
-        return NextResponse.json(
-          { error: "Invalid user id in session" },
-          { status: 400 },
-        );
-      }
-
-      const ownerObjectId = new mongoose.Types.ObjectId(userId);
-
-      if (!mongoose.Types.ObjectId.isValid(resolvedServiceId)) {
-        return NextResponse.json(
-          { error: "Invalid serviceId" },
-          { status: 400 },
-        );
-      }
-
-      const serviceObjectId = new mongoose.Types.ObjectId(resolvedServiceId);
-
-      const owned = await ServiceModel.findOne({
-        _id: serviceObjectId,
-        ownerId: ownerObjectId,
-      })
-        .select("_id")
-        .lean();
-
-      if (!owned) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
+    if (!resolvedServiceId) {
+      return NextResponse.json(
+        { error: "serviceId is required" },
+        { status: 400 },
+      );
     }
 
     if (
-      !resolvedServiceId ||
+      resolvedServiceId &&
       !mongoose.Types.ObjectId.isValid(resolvedServiceId)
     ) {
       return NextResponse.json({ error: "Invalid serviceId" }, { status: 400 });
     }
 
-    const serviceObjectId = new mongoose.Types.ObjectId(resolvedServiceId);
+    const serviceObjectId = resolvedServiceId
+      ? new mongoose.Types.ObjectId(resolvedServiceId)
+      : undefined;
 
-    const service = await ServiceModel.findById(serviceObjectId)
-      .select("systemPrompt promptConfig")
-      .lean();
+    const service = serviceObjectId
+      ? await ServiceModel.findById(serviceObjectId)
+          .select("systemPrompt promptConfig allowedOrigins")
+          .lean()
+      : null;
+
+    if (!service) {
+      return NextResponse.json({ error: "Service not found" }, { status: 404 });
+    }
+
+    const allowedOrigins =
+      service && typeof service === "object"
+        ? ((service as { allowedOrigins?: unknown }).allowedOrigins as
+            | string[]
+            | undefined)
+        : undefined;
+
+    const normalizedAllowedOrigins = Array.isArray(allowedOrigins)
+      ? allowedOrigins
+          .map((v) => normalizeAllowedOrigin(v))
+          .filter((v): v is string => Boolean(v))
+      : [];
+
+    if (isEmbedRequest(req, embedReferrer)) {
+      if (normalizedAllowedOrigins.length === 0) {
+        return NextResponse.json(
+          {
+            error:
+              "Embed is disabled for this service. Add allowed origins in service settings.",
+          },
+          { status: 403 },
+        );
+      }
+
+      const requestOrigin =
+        originFromReferrer(req.headers.get("origin") ?? "") ??
+        originFromReferrer(req.headers.get("referer") ?? "") ??
+        originFromReferrer(embedReferrer);
+
+      if (
+        !requestOrigin ||
+        !isAllowedOrigin(requestOrigin, normalizedAllowedOrigins)
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Embed is not allowed from this domain. Add it to allowed origins in service settings.",
+          },
+          { status: 403 },
+        );
+      }
+    }
 
     const apiKey = process.env.GEMINI_API_KEY;
 
@@ -195,35 +273,42 @@ export async function POST(req: NextRequest) {
     // 1️⃣ Embed question
     const emb = await embedTextGemini({ contents: [message] });
     const vector = emb?.[0]?.values;
-    console.log("Query embedding:", vector);
 
     if (!vector)
       return NextResponse.json({ error: "Embedding failed" }, { status: 500 });
 
     // 2️⃣ Vector search
-    const chunks = await RagChunks.aggregate([
-      {
-        $vectorSearch: {
-          queryVector: vector,
-          index: "rga_index",
-          path: "embedding",
-          numCandidates: 50,
-          limit: 5,
-        },
-      },
-      { $match: { serviceId: serviceObjectId } },
-      {
-        $project: {
-          _id: 0,
-          chunkText: 1,
-          score: { $meta: "vectorSearchScore" },
-        },
-      },
-    ]);
-    console.log("Retrieved chunks:", chunks);
+    const chunks = serviceObjectId
+      ? await RagChunks.aggregate([
+          {
+            $vectorSearch: {
+              queryVector: vector,
+              index: "rga_index",
+              path: "embedding",
+              numCandidates: 50,
+              filter: {
+                serviceId: { $eq: serviceObjectId },
+              },
+              limit: 5,
+            },
+          },
+          { $match: { serviceId: serviceObjectId } },
+          {
+            $project: {
+              _id: 0,
+              chunkText: 1,
+              score: { $meta: "vectorSearchScore" },
+            },
+          },
+        ])
+      : [];
+
     // 3️⃣ Build retrieved context
     const context = chunks
-      .map((c, i) => `Source ${i + 1}:\n${c.chunkText}`)
+      .map(
+        (c, i) => `Source ${i + 1}:
+${c.chunkText}`,
+      )
       .join("\n\n");
 
     // 4️⃣ Format frontend history
@@ -288,6 +373,9 @@ export async function POST(req: NextRequest) {
     }
 
     console.error(err);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "there was an error processing your request" },
+      { status: 500 },
+    );
   }
 }

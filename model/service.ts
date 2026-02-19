@@ -6,6 +6,7 @@ interface IService extends Document {
   slug: string;
   description: string;
   systemPrompt: string;
+  allowedOrigins?: string[];
   promptConfig?: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
@@ -18,6 +19,7 @@ const StoreSchema: Schema<IService> = new Schema(
     slug: { type: String, required: true, unique: true },
     description: { type: String, default: "" },
     systemPrompt: { type: String, default: "" },
+    allowedOrigins: { type: [String], default: [] },
     promptConfig: { type: Schema.Types.Mixed, default: undefined },
   },
   { timestamps: true },

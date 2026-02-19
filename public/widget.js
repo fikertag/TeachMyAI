@@ -19,8 +19,8 @@
   button.style.right = "16px";
   button.style.bottom = "16px";
   button.style.zIndex = "2147483647";
-  button.style.width = "56px";
-  button.style.height = "56px";
+  button.style.height = "44px";
+  button.style.padding = "0 16px";
   button.style.borderRadius = "9999px";
   button.style.border = "1px solid rgba(0,0,0,0.15)";
   button.style.background = "#111";
@@ -28,12 +28,13 @@
   button.style.cursor = "pointer";
   button.style.font =
     "14px system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
+  button.style.fontWeight = "600";
   button.style.boxShadow = "0 8px 24px rgba(0,0,0,0.18)";
-  button.textContent = "Chat";
+  button.textContent = "Chat with AI";
 
   var iframe = document.createElement("iframe");
   iframe.src = iframeSrc;
-  iframe.title = "Chat";
+  iframe.title = "Chat With AI";
   iframe.style.position = "fixed";
   iframe.style.right = "16px";
   iframe.style.bottom = "80px";
@@ -51,7 +52,7 @@
   function toggle() {
     var open = iframe.style.display !== "none";
     iframe.style.display = open ? "none" : "block";
-    button.textContent = open ? "Chat" : "Close";
+    button.textContent = open ? "Chat with AI" : "Close";
   }
 
   button.addEventListener("click", toggle);

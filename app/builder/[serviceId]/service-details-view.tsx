@@ -44,6 +44,7 @@ type Service = {
   slug: string;
   description: string;
   systemPrompt?: string;
+  allowedOrigins?: string[];
   promptConfig?: Record<string, unknown>;
 };
 
@@ -151,6 +152,28 @@ function toPromptConfigPayload(draft: PromptConfigDraft) {
   return Object.keys(payload).length > 0 ? payload : undefined;
 }
 
+function normalizeOriginLine(value: string): string | null {
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed) return null;
+
+  if (trimmed.startsWith("*.")) {
+    const host = trimmed.slice(2).trim();
+    return host ? `*.${host}` : null;
+  }
+
+  try {
+    const parsed = new URL(
+      trimmed.includes("://") ? trimmed : `https://${trimmed}`,
+    );
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return null;
+    }
+    return `${parsed.protocol}//${parsed.host}`.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
 export default function ServiceDetailsView({
   serviceId,
 }: {
@@ -173,6 +196,9 @@ export default function ServiceDetailsView({
     useState<PromptConfigDraft>(() => toPromptConfigDraft());
   const [isSavingService, setIsSavingService] = useState(false);
   const [isDeletingService, setIsDeletingService] = useState(false);
+  const [embedOriginsDraft, setEmbedOriginsDraft] = useState("");
+  const [embedOriginInput, setEmbedOriginInput] = useState("");
+  const [isSavingEmbedOrigins, setIsSavingEmbedOrigins] = useState(false);
 
   const [knowledgeDocs, setKnowledgeDocs] = useState<KnowledgeDocument[]>([]);
   const [isLoadingKnowledge, setIsLoadingKnowledge] = useState(false);
@@ -239,6 +265,35 @@ export default function ServiceDetailsView({
     return instruction ?? "";
   }, []);
 
+  const draftOriginLines = useMemo(
+    () =>
+      embedOriginsDraft
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean),
+    [embedOriginsDraft],
+  );
+
+  const validDraftOrigins = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          draftOriginLines
+            .map((line) => normalizeOriginLine(line))
+            .filter((line): line is string => Boolean(line)),
+        ),
+      ),
+    [draftOriginLines],
+  );
+
+  const invalidDraftOrigins = useMemo(
+    () =>
+      draftOriginLines.filter((line) => {
+        return !normalizeOriginLine(line);
+      }),
+    [draftOriginLines],
+  );
+
   const isUsingDefaultSystemPrompt = !serviceSystemPromptDraft.trim();
   const displayedSystemPrompt = isUsingDefaultSystemPrompt
     ? defaultSystemPromptText
@@ -269,6 +324,7 @@ export default function ServiceDetailsView({
       setServiceSlugDraft(found.slug ?? "");
       setServiceDescriptionDraft(found.description ?? "");
       setServiceSystemPromptDraft(found.systemPrompt ?? "");
+      setEmbedOriginsDraft((found.allowedOrigins ?? []).join("\n"));
       setPromptBuilderDraft(toPromptConfigDraft(found.promptConfig));
       setSystemPromptEditorMode(found.promptConfig ? "builder" : "text");
       setIsEditingSystemPrompt(false);
@@ -436,6 +492,8 @@ export default function ServiceDetailsView({
           slug: data.service?.slug ?? prev.slug,
           description: data.service?.description ?? prev.description,
           systemPrompt: data.service?.systemPrompt ?? prev.systemPrompt,
+          allowedOrigins:
+            data.service?.allowedOrigins ?? prev.allowedOrigins ?? [],
           promptConfig: data.service?.promptConfig ?? prev.promptConfig,
         };
       });
@@ -445,6 +503,81 @@ export default function ServiceDetailsView({
     } finally {
       setIsSavingService(false);
     }
+  };
+
+  const saveEmbedOrigins = async () => {
+    if (!service?.id) return;
+
+    setError("");
+    setSuccess("");
+
+    if (invalidDraftOrigins.length > 0) {
+      setError("Fix invalid origins before saving");
+      return;
+    }
+
+    const normalized = validDraftOrigins;
+
+    const current = Array.from(
+      new Set((service.allowedOrigins ?? []).map((line) => line.toLowerCase())),
+    );
+
+    if (JSON.stringify(normalized) === JSON.stringify(current)) {
+      setSuccess("No origin changes to save");
+      return;
+    }
+
+    setIsSavingEmbedOrigins(true);
+    try {
+      const res = await fetch(`/api/service/${service.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ allowedOrigins: normalized }),
+      });
+
+      const data = (await res.json()) as { service?: Service; error?: string };
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to save allowed origins");
+      }
+
+      const nextOrigins = data.service?.allowedOrigins ?? normalized;
+      setService((prev) =>
+        prev
+          ? {
+              ...prev,
+              allowedOrigins: nextOrigins,
+            }
+          : prev,
+      );
+      setEmbedOriginsDraft(nextOrigins.join("\n"));
+      setSuccess("Allowed origins updated");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to save origins");
+    } finally {
+      setIsSavingEmbedOrigins(false);
+    }
+  };
+
+  const addEmbedOrigin = () => {
+    setError("");
+    const normalized = normalizeOriginLine(embedOriginInput);
+    if (!normalized) {
+      setError("Invalid origin. Use https://example.com or *.example.com");
+      return;
+    }
+
+    if (validDraftOrigins.includes(normalized)) {
+      setEmbedOriginInput("");
+      return;
+    }
+
+    setEmbedOriginsDraft([...validDraftOrigins, normalized].join("\n"));
+    setEmbedOriginInput("");
+  };
+
+  const removeEmbedOrigin = (originToRemove: string) => {
+    const next = validDraftOrigins.filter((item) => item !== originToRemove);
+    setEmbedOriginsDraft(next.join("\n"));
   };
 
   const deleteService = async () => {
@@ -1676,6 +1809,87 @@ export default function ServiceDetailsView({
                         >
                           Copy snippet
                         </Button>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border bg-background p-4 lg:col-span-2">
+                      <p className="text-sm font-medium">Allowed origins</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Restrict widget usage to specific domains. Empty list
+                        means embed will be blocked.
+                      </p>
+
+                      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                        <Input
+                          value={embedOriginInput}
+                          onChange={(e) => setEmbedOriginInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              addEmbedOrigin();
+                            }
+                          }}
+                          placeholder="https://example.com or *.example.com"
+                          className="font-mono text-xs"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={addEmbedOrigin}
+                        >
+                          Add origin
+                        </Button>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {validDraftOrigins.length === 0 ? (
+                          <span className="text-xs text-muted-foreground">
+                            No allowed origins added yet.
+                          </span>
+                        ) : (
+                          validDraftOrigins.map((item) => (
+                            <span
+                              key={item}
+                              className="inline-flex items-center gap-1 rounded-full border bg-muted px-2 py-1 font-mono text-xs"
+                            >
+                              {item}
+                              <button
+                                type="button"
+                                className="rounded-sm p-0.5 text-muted-foreground transition hover:bg-background hover:text-foreground"
+                                aria-label={`Remove ${item}`}
+                                onClick={() => removeEmbedOrigin(item)}
+                              >
+                                <X className="size-3" />
+                              </button>
+                            </span>
+                          ))
+                        )}
+                      </div>
+
+                      {invalidDraftOrigins.length > 0 ? (
+                        <p className="mt-2 text-xs text-destructive">
+                          Invalid entries: {invalidDraftOrigins.join(", ")}
+                        </p>
+                      ) : null}
+
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          onClick={() => void saveEmbedOrigins()}
+                          disabled={isSavingEmbedOrigins}
+                          className="text-white"
+                        >
+                          {isSavingEmbedOrigins ? "Saving..." : "Save origins"}
+                        </Button>
+                        {validDraftOrigins.length > 0 ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => setEmbedOriginsDraft("")}
+                          >
+                            Clear all
+                          </Button>
+                        ) : null}
                       </div>
                     </div>
 

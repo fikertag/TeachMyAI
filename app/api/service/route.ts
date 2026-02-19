@@ -14,6 +14,7 @@ const CreateServiceSchema = z.object({
   slug: z.string().min(1).optional(),
   description: z.string().optional(),
   systemPrompt: z.string().optional(),
+  allowedOrigins: z.array(z.string().min(1).max(300)).max(50).optional(),
   promptConfig: z
     .object({
       role: z.string().optional(),
@@ -51,6 +52,7 @@ async function createServiceDoc(input: {
   slug: string;
   description?: string;
   systemPrompt?: string;
+  allowedOrigins?: string[];
   promptConfig?: Record<string, unknown>;
 }) {
   return ServiceModel.create({
@@ -59,6 +61,7 @@ async function createServiceDoc(input: {
     slug: input.slug,
     description: input.description ?? "",
     systemPrompt: input.systemPrompt ?? "",
+    allowedOrigins: input.allowedOrigins ?? [],
     promptConfig: input.promptConfig,
   });
 }
@@ -96,6 +99,7 @@ export async function GET() {
         slug: s.slug,
         description: s.description,
         systemPrompt: s.systemPrompt,
+        allowedOrigins: Array.isArray(s.allowedOrigins) ? s.allowedOrigins : [],
         promptConfig: s.promptConfig,
         createdAt: s.createdAt,
         updatedAt: s.updatedAt,
@@ -156,6 +160,7 @@ export async function POST(req: Request) {
         slug,
         description: body.description,
         systemPrompt: body.systemPrompt,
+        allowedOrigins: body.allowedOrigins,
         promptConfig: body.promptConfig,
       });
 
@@ -168,6 +173,9 @@ export async function POST(req: Request) {
             slug: service.slug,
             description: service.description,
             systemPrompt: service.systemPrompt,
+            allowedOrigins: Array.isArray(service.allowedOrigins)
+              ? service.allowedOrigins
+              : [],
             promptConfig: service.promptConfig,
           },
         },
@@ -199,6 +207,7 @@ export async function POST(req: Request) {
             slug,
             description: body.description,
             systemPrompt: body.systemPrompt,
+            allowedOrigins: body.allowedOrigins,
             promptConfig: body.promptConfig,
           });
 
@@ -211,6 +220,9 @@ export async function POST(req: Request) {
                 slug: service.slug,
                 description: service.description,
                 systemPrompt: service.systemPrompt,
+                allowedOrigins: Array.isArray(service.allowedOrigins)
+                  ? service.allowedOrigins
+                  : [],
                 promptConfig: service.promptConfig,
               },
             },

@@ -33,8 +33,6 @@ export default function Footer() {
             ))}
           </nav>
 
-          <ThemeSwitcher />
-
           <p className="text-muted-foreground mt-2 border-t pt-6 text-sm">
             &copy; {new Date().getFullYear()} TeachMyAI.
           </p>

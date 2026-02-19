@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { BotMessageSquare } from "lucide-react";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -8,14 +9,13 @@ export default function EmbedChatClient({ serviceId }: { serviceId: string }) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const [error, setError] = useState("");
 
   const listRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!listRef.current) return;
     listRef.current.scrollTop = listRef.current.scrollHeight;
-  }, [messages.length]);
+  }, [messages.length, isSending]);
 
   const canSend = Boolean(serviceId) && input.trim().length > 0 && !isSending;
 
@@ -29,7 +29,6 @@ export default function EmbedChatClient({ serviceId }: { serviceId: string }) {
 
     const text = input.trim();
     setInput("");
-    setError("");
 
     const nextMessages: Msg[] = [...messages, { role: "user", content: text }];
     setMessages(nextMessages);
@@ -39,7 +38,13 @@ export default function EmbedChatClient({ serviceId }: { serviceId: string }) {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ serviceId, messages: nextMessages }),
+        body: JSON.stringify({
+          serviceId,
+          messages: nextMessages,
+          embedReferrer:
+            (typeof document !== "undefined" ? document.referrer : "") ||
+            (typeof window !== "undefined" ? window.location.href : ""),
+        }),
       });
 
       const data = (await res.json()) as { response?: string; error?: unknown };
@@ -57,7 +62,13 @@ export default function EmbedChatClient({ serviceId }: { serviceId: string }) {
         { role: "assistant", content: String(data.response ?? "") },
       ]);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to send message");
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: e instanceof Error ? e.message : "Failed to send message",
+        },
+      ]);
     } finally {
       setIsSending(false);
     }
@@ -66,7 +77,7 @@ export default function EmbedChatClient({ serviceId }: { serviceId: string }) {
   return (
     <div
       style={{
-        height: "100vh",
+        height: "100%",
         width: "100%",
         display: "flex",
         flexDirection: "column",
@@ -78,10 +89,30 @@ export default function EmbedChatClient({ serviceId }: { serviceId: string }) {
         style={{
           padding: "12px 12px",
           borderBottom: "1px solid rgba(0,0,0,0.08)",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
         }}
       >
-        <div style={{ fontSize: 14, fontWeight: 600 }}>Chat</div>
-        <div style={{ fontSize: 12, opacity: 0.7 }}>{subtitle}</div>
+        <div
+          style={{
+            height: 30,
+            width: 30,
+            borderRadius: 999,
+            background: "#111",
+            color: "#fff",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          <BotMessageSquare size={16} />
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 600 }}>Chat </div>
+          <div style={{ fontSize: 12, opacity: 0.7 }}>{subtitle}</div>
+        </div>
       </div>
 
       <div
@@ -129,13 +160,39 @@ export default function EmbedChatClient({ serviceId }: { serviceId: string }) {
             </div>
           );
         })}
-      </div>
 
-      {error ? (
-        <div style={{ padding: "8px 12px", color: "#b00020", fontSize: 12 }}>
-          {error}
-        </div>
-      ) : null}
+        {isSending ? (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-start",
+              marginBottom: 8,
+            }}
+          >
+            <div
+              style={{
+                maxWidth: "85%",
+                padding: "10px 12px",
+                borderRadius: 12,
+                background: "#fff",
+                color: "#111",
+                border: "1px solid rgba(0,0,0,0.08)",
+                fontSize: 13,
+                lineHeight: 1.35,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span>Thinking</span>
+                <span style={{ display: "inline-flex", gap: 4 }}>
+                  <span className="size-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.3s]" />
+                  <span className="size-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.15s]" />
+                  <span className="size-1.5 animate-bounce rounded-full bg-current" />
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
 
       <div
         style={{
@@ -178,7 +235,7 @@ export default function EmbedChatClient({ serviceId }: { serviceId: string }) {
             fontSize: 13,
           }}
         >
-          {isSending ? "..." : "Send"}
+          Send
         </button>
       </div>
     </div>

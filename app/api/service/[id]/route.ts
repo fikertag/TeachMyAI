@@ -18,6 +18,7 @@ const UpdateServiceSchema = z
     slug: z.string().min(1).max(80).optional(),
     description: z.string().max(2000).optional(),
     systemPrompt: z.string().max(20000).optional(),
+    allowedOrigins: z.array(z.string().min(1).max(300)).max(50).optional(),
     promptConfig: z
       .object({
         role: z.string().optional(),
@@ -117,6 +118,10 @@ export async function PATCH(
       update.systemPrompt = body.systemPrompt;
     }
 
+    if (body.allowedOrigins !== undefined) {
+      update.allowedOrigins = body.allowedOrigins;
+    }
+
     if (body.promptConfig !== undefined) {
       update.promptConfig = body.promptConfig;
     }
@@ -142,6 +147,11 @@ export async function PATCH(
           slug: (updated as { slug: string }).slug,
           description: (updated as { description: string }).description,
           systemPrompt: (updated as { systemPrompt: string }).systemPrompt,
+          allowedOrigins: Array.isArray(
+            (updated as { allowedOrigins?: unknown }).allowedOrigins,
+          )
+            ? ((updated as { allowedOrigins: string[] }).allowedOrigins ?? [])
+            : [],
           promptConfig: (updated as { promptConfig?: unknown }).promptConfig,
           createdAt: updated.createdAt,
           updatedAt: updated.updatedAt,
