@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "sileo";
 
 const geistSans = Geist({
@@ -30,7 +29,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} min-h-svh bg-background text-foreground antialiased`}
       >
         <Toaster position="bottom-right" />
-        <ThemeProvider>{children}</ThemeProvider>
+        {children}
       </body>
     </html>
   );

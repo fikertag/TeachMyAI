@@ -9,7 +9,7 @@ import {
   Plus,
 } from "lucide-react";
 import Image from "next/image";
-import LogoCloud from "@/components/logo-cloud-2";
+import LogoCloud from "@/components/landingPage/logo-cloud-2";
 
 export default function HeroSection() {
   return (

@@ -221,14 +221,10 @@ export async function POST(req: Request) {
           ? ((err as { keyPattern?: Record<string, unknown> }).keyPattern ?? {})
           : {};
 
-      // Backward compatibility: if an old unique ownerId index still exists,
-      // remove it and retry once.
       if ("ownerId" in keyPattern) {
         try {
           await ServiceModel.collection.dropIndex("ownerId_1");
-        } catch {
-          // ignore if index doesn't exist or cannot be dropped in this context
-        }
+        } catch {}
 
         try {
           const service = await createServiceDoc({

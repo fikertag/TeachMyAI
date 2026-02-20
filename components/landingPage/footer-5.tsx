@@ -1,6 +1,4 @@
 import Link from "next/link";
-import { ThemeSwitcher } from "./theme-switcher";
-
 const links = [
   { label: "How it works", href: "#how-it-works" },
   { label: "API", href: "#api" },

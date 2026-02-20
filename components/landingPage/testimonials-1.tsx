@@ -13,7 +13,7 @@ const testimonials = [
     name: "Theo Balick",
     role: "Founder, CEO - Acme",
     quote:
-      "The public chat link is the easiest way we’ve found to share accurate service information with customers.",
+      "The public chat link is the easiest way we've found to share accurate service information with customers.",
   },
   {
     avatar: "/me.jpeg",
