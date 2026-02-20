@@ -1,4 +1,4 @@
-import ServiceDetailsView from "./service-details-view";
+import ServiceDetailsView from "./service-details-view-refactored";
 
 export default async function BuilderServicePage({
   params,
