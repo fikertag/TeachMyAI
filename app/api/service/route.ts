@@ -99,6 +99,20 @@ export async function GET() {
         slug: s.slug,
         description: s.description,
         color: s.color,
+        quickPrompts: (s as { quickPrompts?: unknown }).quickPrompts ?? [
+          {
+            title: "Get started",
+            prompt: "Tell me more about this service",
+          },
+          {
+            title: "Explore capabilities",
+            prompt: "What can you help me with?",
+          },
+          {
+            title: "Ask a question",
+            prompt: "I have a specific question",
+          },
+        ],
         systemPrompt: s.systemPrompt,
         allowedOrigins: Array.isArray(s.allowedOrigins) ? s.allowedOrigins : [],
         hasGeminiApiKey:

@@ -22,6 +22,16 @@ const UpdateServiceSchema = z
       .string()
       .regex(/^#[0-9A-Fa-f]{6}$/)
       .optional(),
+    quickPrompts: z
+      .array(
+        z.object({
+          title: z.string().min(1).max(100),
+          prompt: z.string().min(1).max(1000),
+        }),
+      )
+      .min(1)
+      .max(10)
+      .optional(),
     systemPrompt: z.string().max(20000).optional(),
     allowedOrigins: z.array(z.string().min(1).max(300)).max(50).optional(),
     geminiApiKey: z.string().min(20).max(300).optional().nullable(),
@@ -133,6 +143,10 @@ export async function PATCH(
       update.color = body.color;
     }
 
+    if (body.quickPrompts !== undefined) {
+      update.quickPrompts = body.quickPrompts;
+    }
+
     if (typeof body.systemPrompt === "string") {
       update.systemPrompt = body.systemPrompt;
     }
@@ -194,6 +208,21 @@ export async function PATCH(
           slug: (updated as { slug: string }).slug,
           description: (updated as { description: string }).description,
           color: (updated as { color?: string }).color,
+          quickPrompts: (updated as { quickPrompts?: unknown })
+            .quickPrompts ?? [
+            {
+              title: "Get started",
+              prompt: "Tell me more about this service",
+            },
+            {
+              title: "Explore capabilities",
+              prompt: "What can you help me with?",
+            },
+            {
+              title: "Ask a question",
+              prompt: "I have a specific question",
+            },
+          ],
           systemPrompt: (updated as { systemPrompt: string }).systemPrompt,
           allowedOrigins: Array.isArray(
             (updated as { allowedOrigins?: unknown }).allowedOrigins,

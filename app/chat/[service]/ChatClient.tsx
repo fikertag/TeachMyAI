@@ -25,6 +25,10 @@ type Service = {
   slug: string;
   description?: string;
   color?: string;
+  quickPrompts?: Array<{
+    title: string;
+    prompt: string;
+  }>;
 };
 
 type ChatMessage = {
@@ -61,26 +65,29 @@ export default function ChatClient({ slug }: { slug: string }) {
     ]);
   };
 
-  const quickPrompts = useMemo(
-    () => [
+  const quickPrompts = useMemo(() => {
+    const dbPrompts =
+      service?.quickPrompts && service.quickPrompts.length > 0
+        ? service.quickPrompts
+        : undefined;
+
+    if (dbPrompts) return dbPrompts;
+
+    return [
       {
         title: "Get started",
-        description: "Tell me more about the service",
         prompt: `Tell me more about ${service?.name ?? "this service"}`,
       },
       {
         title: "Explore capabilities",
-        description: "What can you help me with?",
         prompt: "What can you help me with?",
       },
       {
         title: "Ask a question",
-        description: "I have a specific question...",
         prompt: "I have a specific question",
       },
-    ],
-    [service?.name],
-  );
+    ];
+  }, [service?.quickPrompts, service?.name]);
 
   useEffect(() => {
     let cancelled = false;
@@ -302,7 +309,11 @@ export default function ChatClient({ slug }: { slug: string }) {
                       {quickPrompts.map((prompt) => (
                         <Card
                           key={prompt.title}
-                          className="cursor-pointer border-primary/20 transition hover:border-primary/50 hover:shadow-sm"
+                          className="cursor-pointer transition hover:shadow-xl"
+                          style={{
+                            backgroundColor: service?.color + "10",
+                            borderColor: service?.color + "20",
+                          }}
                           onClick={() => {
                             setInput(prompt.prompt);
                             focusChatInput();

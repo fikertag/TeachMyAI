@@ -51,6 +51,11 @@ type Service = {
   name: string;
   slug: string;
   description: string;
+  color?: string;
+  quickPrompts?: Array<{
+    title: string;
+    prompt: string;
+  }>;
   systemPrompt?: string;
   allowedOrigins?: string[];
   hasGeminiApiKey?: boolean;
@@ -200,6 +205,12 @@ export default function ServiceDetailsView({
   const [serviceDescriptionDraft, setServiceDescriptionDraft] = useState("");
   const [serviceSystemPromptDraft, setServiceSystemPromptDraft] = useState("");
   const [serviceColorDraft, setServiceColorDraft] = useState("");
+  const [serviceQuickPromptsDraft, setServiceQuickPromptsDraft] = useState<
+    Array<{
+      title: string;
+      prompt: string;
+    }>
+  >([]);
   const [isEditingSystemPrompt, setIsEditingSystemPrompt] = useState(false);
   const [systemPromptEditorMode, setSystemPromptEditorMode] = useState<
     "text" | "builder"
@@ -208,6 +219,8 @@ export default function ServiceDetailsView({
     useState<PromptConfigDraft>(() => toPromptConfigDraft());
   const [isSavingService, setIsSavingService] = useState(false);
   const [isDeletingService, setIsDeletingService] = useState(false);
+  const [isSavingColor, setIsSavingColor] = useState(false);
+  const [isSavingQuickPrompts, setIsSavingQuickPrompts] = useState(false);
   const [embedOriginsDraft, setEmbedOriginsDraft] = useState("");
   const [embedOriginInput, setEmbedOriginInput] = useState("");
   const [isSavingEmbedOrigins, setIsSavingEmbedOrigins] = useState(false);
@@ -339,6 +352,23 @@ export default function ServiceDetailsView({
       setServiceDescriptionDraft(found.description ?? "");
       setServiceSystemPromptDraft(found.systemPrompt ?? "");
       setServiceColorDraft(found.color ?? "#ffffff");
+      // Only set draft from backend, do not update service.quickPrompts on edit
+      setServiceQuickPromptsDraft(
+        found.quickPrompts ?? [
+          {
+            title: "Get started",
+            prompt: `Tell me more about ${found.name ?? "this service"}`,
+          },
+          {
+            title: "Explore capabilities",
+            prompt: "What can you help me with?",
+          },
+          {
+            title: "Ask a question",
+            prompt: "I have a specific question",
+          },
+        ],
+      );
       setEmbedOriginsDraft((found.allowedOrigins ?? []).join("\n"));
       setPromptBuilderDraft(toPromptConfigDraft(found.promptConfig));
       setSystemPromptEditorMode(found.promptConfig ? "builder" : "text");
@@ -458,10 +488,6 @@ export default function ServiceDetailsView({
       patch.description = serviceDescriptionDraft;
     }
 
-    if (serviceColorDraft !== (service.color ?? "#ffffff")) {
-      patch.color = serviceColorDraft;
-    }
-
     if (
       systemPromptEditorMode === "text" &&
       serviceSystemPromptDraft !== (service.systemPrompt ?? "")
@@ -510,7 +536,6 @@ export default function ServiceDetailsView({
           ...prev,
           slug: data.service?.slug ?? prev.slug,
           description: data.service?.description ?? prev.description,
-          color: data.service?.color ?? prev.color,
           systemPrompt: data.service?.systemPrompt ?? prev.systemPrompt,
           allowedOrigins:
             data.service?.allowedOrigins ?? prev.allowedOrigins ?? [],
@@ -528,6 +553,220 @@ export default function ServiceDetailsView({
       setError(e instanceof Error ? e.message : "Failed to save service");
     } finally {
       setIsSavingService(false);
+    }
+  };
+
+  const saveColor = async () => {
+    if (!service?.id) {
+      setError("Service not loaded. Please refresh the page.");
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+
+    // Validate and normalize color format
+    let normalizedColor = serviceColorDraft;
+    if (!/^#[0-9A-Fa-f]{6}$/i.test(serviceColorDraft)) {
+      if (/^#[0-9A-Fa-f]{3}$/i.test(serviceColorDraft)) {
+        // Convert 3-digit hex to 6-digit hex
+        normalizedColor =
+          "#" +
+          serviceColorDraft[1] +
+          serviceColorDraft[1] +
+          serviceColorDraft[2] +
+          serviceColorDraft[2] +
+          serviceColorDraft[3] +
+          serviceColorDraft[3];
+      } else {
+        setError(
+          "Invalid color format. Please use a valid hex color (e.g., #FF0000)",
+        );
+        return;
+      }
+    }
+
+    if (normalizedColor === (service.color ?? "#ffffff")) {
+      // No changes to save, just return without showing a message
+      return;
+    }
+
+    setIsSavingColor(true);
+    try {
+      const res = await fetch(`/api/service/${service.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ color: normalizedColor }),
+      });
+
+      const data = (await res.json()) as { service?: Service; error?: string };
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to save color");
+      }
+
+      setService((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          color: data.service?.color ?? prev.color,
+        };
+      });
+      // Update the draft with the normalized color
+      setServiceColorDraft(normalizedColor);
+      setSuccess("Color updated");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to save color");
+    } finally {
+      setIsSavingColor(false);
+    }
+  };
+
+  const saveQuickPrompts = async () => {
+    if (!service?.id) {
+      setError("Service not loaded. Please refresh the page.");
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+
+    const normalizedDraftPrompts = serviceQuickPromptsDraft.map((prompt) => ({
+      title: prompt.title.trim(),
+      prompt: prompt.prompt.trim(),
+    }));
+
+    const partiallyFilledPrompts = normalizedDraftPrompts.filter(
+      (prompt) =>
+        (prompt.title.length > 0 && prompt.prompt.length === 0) ||
+        (prompt.title.length === 0 && prompt.prompt.length > 0),
+    );
+
+    if (partiallyFilledPrompts.length > 0) {
+      setError(
+        "Each quick prompt must have both title and message. Clear both fields to skip a row.",
+      );
+      return;
+    }
+
+    const cleanedPrompts = normalizedDraftPrompts.filter(
+      (prompt) => prompt.title.length > 0 && prompt.prompt.length > 0,
+    );
+
+    // Check length limits
+    const lengthInvalidPrompts = cleanedPrompts.filter(
+      (prompt) => prompt.title.length > 100 || prompt.prompt.length > 1000,
+    );
+
+    if (lengthInvalidPrompts.length > 0) {
+      setError(
+        "Titles must be 100 characters or less, and messages must be 1000 characters or less.",
+      );
+      return;
+    }
+
+    if (cleanedPrompts.length === 0) {
+      setError("Add at least one quick prompt before saving.");
+      return;
+    }
+
+    if (cleanedPrompts.length > 10) {
+      setError("Maximum 10 quick prompts allowed.");
+      return;
+    }
+
+    const defaultPrompts = [
+      {
+        title: "Get started",
+        prompt: `Tell me more about ${service.name ?? "this service"}`,
+      },
+      {
+        title: "Explore capabilities",
+        prompt: "What can you help me with?",
+      },
+      {
+        title: "Ask a question",
+        prompt: "I have a specific question",
+      },
+    ];
+
+    // Fetch latest quickPrompts from backend list endpoint and compare to DB state
+    let latestPromptsFromDb:
+      | Array<{ title: string; prompt: string }>
+      | undefined;
+    try {
+      const res = await fetch(`/api/service`, { method: "GET" });
+      if (res.ok) {
+        const data = (await res.json()) as {
+          services?: Service[];
+          error?: string;
+        };
+        const found = (data.services ?? []).find((s) => s.id === service.id);
+        latestPromptsFromDb = found?.quickPrompts;
+      }
+    } catch {
+      // fall back to local service state if fetch fails
+    }
+
+    const dbPrompts = (
+      latestPromptsFromDb ??
+      service.quickPrompts ??
+      defaultPrompts
+    )
+      .map((prompt) => ({
+        title: prompt.title.trim(),
+        prompt: prompt.prompt.trim(),
+      }))
+      .filter((prompt) => prompt.title && prompt.prompt);
+
+    if (JSON.stringify(cleanedPrompts) === JSON.stringify(dbPrompts)) {
+      setSuccess("No quick prompt changes to save.");
+      return;
+    }
+
+    setIsSavingQuickPrompts(true);
+    try {
+      const res = await fetch(`/api/service/${service.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quickPrompts: cleanedPrompts }),
+      });
+
+      const data = (await res.json()) as {
+        service?: Service;
+        error?: string;
+        details?: {
+          fieldErrors?: Record<string, string[]>;
+          formErrors?: string[];
+        };
+      };
+      if (!res.ok) {
+        const details = data.details;
+        const flattenedDetails = details
+          ? [
+              ...(details.formErrors ?? []),
+              ...Object.values(details.fieldErrors ?? {}).flat(),
+            ]
+              .filter(Boolean)
+              .join("; ")
+          : "";
+        throw new Error(
+          flattenedDetails || data.error || "Failed to save quick prompts",
+        );
+      }
+
+      setService((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          quickPrompts: data.service?.quickPrompts ?? prev.quickPrompts,
+        };
+      });
+      setServiceQuickPromptsDraft(data.service?.quickPrompts ?? cleanedPrompts);
+      setSuccess("Quick prompts updated");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to save quick prompts");
+    } finally {
+      setIsSavingQuickPrompts(false);
     }
   };
 
@@ -1336,9 +1575,17 @@ export default function ServiceDetailsView({
 
                         {systemPromptEditorMode === "text" ? (
                           <div className="grid gap-2">
-                            <Label htmlFor="service-system-prompt">
-                              System prompt text
-                            </Label>
+                            <div className="flex items-center justify-between">
+                              <Label htmlFor="service-system-prompt">
+                                System prompt text
+                              </Label>
+                              <Link
+                                href="/prompts"
+                                className="text-sm text-primary hover:text-primary/80 underline"
+                              >
+                                Select from previous prompts
+                              </Link>
+                            </div>
                             {isUsingDefaultSystemPrompt ? (
                               <p className="text-xs text-muted-foreground">
                                 You are editing the default prompt. Save to make
@@ -1661,8 +1908,31 @@ export default function ServiceDetailsView({
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="grid gap-4">
+                    {error && (
+                      <div className="rounded-md border border-destructive/20 bg-destructive/10 p-3">
+                        <p className="text-sm text-destructive">{error}</p>
+                      </div>
+                    )}
+                    {success && (
+                      <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-3">
+                        <p className="text-sm text-emerald-700 dark:text-emerald-300">
+                          {success}
+                        </p>
+                      </div>
+                    )}
+
                     <div className="grid gap-2">
-                      <Label htmlFor="service-color">Color</Label>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="service-color">Color</Label>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => void saveColor()}
+                          disabled={isSavingColor || isDeletingService}
+                        >
+                          {isSavingColor ? "Saving..." : "Save"}
+                        </Button>
+                      </div>
                       <div className="flex items-center gap-3">
                         <div
                           className="w-12 h-10 rounded-md border-2 border-border cursor-pointer relative overflow-hidden"
@@ -1675,10 +1945,11 @@ export default function ServiceDetailsView({
                             id="service-color"
                             type="color"
                             value={serviceColorDraft}
-                            onChange={(e) =>
-                              setServiceColorDraft(e.target.value)
-                            }
-                            disabled={isSavingService || isDeletingService}
+                            onChange={(e) => {
+                              setServiceColorDraft(e.target.value);
+                              setError(""); // Clear any previous errors
+                            }}
+                            disabled={isSavingColor || isDeletingService}
                             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                           />
                         </div>
@@ -1694,15 +1965,110 @@ export default function ServiceDetailsView({
                       </p>
                     </div>
 
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        type="button"
-                        className="text-white"
-                        onClick={() => void saveService()}
-                        disabled={isSavingService || isDeletingService}
-                      >
-                        {isSavingService ? "Saving..." : "Save changes"}
-                      </Button>
+                    <div className="grid gap-4 mt-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-base font-semibold">
+                            Quick prompts
+                          </Label>
+                          <p className="text-sm text-muted-foreground">
+                            These buttons are shown at the top of the chat.
+                          </p>
+                        </div>
+                        <span className="inline-flex items-center rounded-full border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                          {serviceQuickPromptsDraft.length}/10 prompts
+                        </span>
+                      </div>
+
+                      <div className="space-y-3">
+                        {serviceQuickPromptsDraft.map((prompt, index) => (
+                          <div
+                            key={index}
+                            className="rounded-xl border bg-background p-4 shadow-sm"
+                          >
+                            <div className="mb-4 flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2">
+                                <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-muted px-2 text-xs font-semibold text-muted-foreground">
+                                  {index + 1}
+                                </span>
+                                <p className="text-sm font-semibold">
+                                  {prompt.title.trim() || "Untitled prompt"}
+                                </p>
+                              </div>
+                              <span className="text-xs text-muted-foreground">
+                                {prompt.prompt.length}/1000
+                              </span>
+                            </div>
+
+                            <div className="grid gap-3">
+                              <div className="grid gap-2">
+                                <Label
+                                  htmlFor={`prompt-title-${index}`}
+                                  className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                                >
+                                  Button title
+                                </Label>
+                                <Input
+                                  id={`prompt-title-${index}`}
+                                  type="text"
+                                  value={prompt.title}
+                                  onChange={(e) => {
+                                    const newPrompts = [
+                                      ...serviceQuickPromptsDraft,
+                                    ];
+                                    newPrompts[index].title = e.target.value;
+                                    setServiceQuickPromptsDraft(newPrompts);
+                                    setError(""); // Clear any previous errors
+                                  }}
+                                  disabled={
+                                    isSavingQuickPrompts || isDeletingService
+                                  }
+                                  placeholder="Ex: Get started"
+                                  maxLength={100}
+                                  className="bg-muted/40"
+                                />
+                              </div>
+
+                              <div className="grid gap-2">
+                                <Label
+                                  htmlFor={`prompt-text-${index}`}
+                                  className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                                >
+                                  Message sent
+                                </Label>
+                                <Textarea
+                                  id={`prompt-text-${index}`}
+                                  value={prompt.prompt}
+                                  onChange={(e) => {
+                                    const newPrompts = [
+                                      ...serviceQuickPromptsDraft,
+                                    ];
+                                    newPrompts[index].prompt = e.target.value;
+                                    setServiceQuickPromptsDraft(newPrompts);
+                                    setError(""); // Clear any previous errors
+                                  }}
+                                  disabled={
+                                    isSavingQuickPrompts || isDeletingService
+                                  }
+                                  className="min-h-20 resize-none bg-muted/40"
+                                  placeholder="Ex: Tell me more about this service"
+                                  maxLength={1000}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex justify-end">
+                        <Button
+                          type="button"
+                          onClick={() => void saveQuickPrompts()}
+                          disabled={isSavingQuickPrompts || isDeletingService}
+                        >
+                          {isSavingQuickPrompts ? "Saving..." : "Save"}
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
