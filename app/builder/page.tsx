@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowUpRight, Bot, Plus, Sparkles } from "lucide-react";
 import { sileo } from "sileo";
-
+import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -35,6 +36,8 @@ type Service = {
 const MAX_SERVICES = 3;
 
 export default function BuilderPage() {
+  const router = useRouter();
+  const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
@@ -187,6 +190,51 @@ export default function BuilderPage() {
                   {showCreateForm ? "Close" : "Create new service"}
                 </Button>
               ) : null}
+
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => setShowSignOutDialog(true)}
+              >
+                Sign Out
+              </Button>
+              {/* Sign Out Confirmation Dialog */}
+              <Dialog
+                open={showSignOutDialog}
+                onOpenChange={setShowSignOutDialog}
+              >
+                <DialogContent className="max-w-sm">
+                  <DialogHeader>
+                    <DialogTitle>Confirm Sign Out</DialogTitle>
+                    <DialogDescription>
+                      Are you sure you want to sign out?
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="flex gap-3 mt-4 justify-end">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowSignOutDialog(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        setShowSignOutDialog(false);
+                        authClient.signOut({
+                          fetchOptions: {
+                            onSuccess: () => {
+                              router.push("/login"); // redirect to login page
+                            },
+                          },
+                        });
+                      }}
+                    >
+                      Sign Out
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           </CardContent>
         </Card>

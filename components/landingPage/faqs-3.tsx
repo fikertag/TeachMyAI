@@ -43,8 +43,8 @@ const faqItems = [
 
 export default function FAQs() {
   return (
-    <section id="faq" className="bg-background @container py-24">
-      <div className="mx-auto max-w-2xl px-6">
+    <section id="faqs" className="bg-background @container py-24">
+      <div className="mx-auto max-w-2xl px-2 md:px-6">
         <h2 className="text-center font-serif text-4xl font-medium">
           Your Questions Answered
         </h2>

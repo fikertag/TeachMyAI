@@ -21,7 +21,7 @@ type Feature =
 export default function Features() {
   const [feature, setFeature] = useState<Feature>("seamless-integrations");
   return (
-    <section id="api" className="bg-background @container py-24 mt-15">
+    <section id="api" className="bg-background @container py-24 ">
       <div className="@2xl:grid-cols-2 mx-auto grid max-w-5xl gap-10 px-6">
         <div>
           <div>

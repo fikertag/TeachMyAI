@@ -9,7 +9,14 @@ import {
   Plus,
 } from "lucide-react";
 import Image from "next/image";
-import LogoCloud from "@/components/landingPage/logo-cloud-2";
+// import LogoCloud from "@/components/landingPage/logo-cloud-2";
+import { Merriweather_Sans } from "next/font/google";
+
+const cascadia = Merriweather_Sans({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  style: ["normal", "italic"],
+});
 
 export default function HeroSection() {
   return (
@@ -17,26 +24,34 @@ export default function HeroSection() {
       <HeroHeader />
       <main className="overflow-hidden">
         <section className="bg-background">
-          <div className="relative py-40">
-            <div className="mask-radial-from-45% mask-radial-to-75% mask-radial-at-top mask-radial-[75%_100%] aspect-2/3 absolute inset-0 opacity-75 blur-sm md:aspect-square lg:aspect-video dark:opacity-5">
+          <div className="relative md:py-45 py-35">
+            <div
+              className="mask-radial-from-45% mask-radial-to-75% mask-radial-at-top mask-radial-[75%_100%] 
+  aspect-2/3 absolute inset-0 
+   blur-xs
+  md:aspect-square lg:aspect-video dark:opacity-70"
+            >
               <Image
                 src="/landing.avif"
                 alt="hero background"
                 width={2198}
                 height={1685}
-                className="h-full w-full object-cover object-top"
+                className="h-full w-full object-cover object-top brightness-105"
               />
             </div>
-            <div className="relative z-10 mx-auto w-full max-w-6xl sm:pl-6">
-              <div className="flex items-center justify-between max-md:flex-col">
-                <div className="max-w-lg max-sm:px-6">
-                  <h1 className="text-balance font-serif text-4xl font-medium sm:text-5xl">
-                    Turn your knowledge Into an AI assistant
+
+            <div className="relative z-10 mx-auto w-full max-w-7xl lg:px-7 sm:pl-6">
+              <div className="flex items-center justify-between flex-col lg:flex-row">
+                <div
+                  className={`lg:max-w-2xl max-w-4xl  max-sm:px-6 ${cascadia.className} flex flex-col items-center lg:items-start`}
+                >
+                  <h1 className="text-balance cascadia-mono-stayled text-[40px] leading-12 min-[412px]:text-5xl text-center lg:text-start font-medium sm:text-6xl lg:leading-17">
+                    Train your Own AI and use It <br /> anywere
                   </h1>
-                  <p className="text-muted-foreground mt-4 text-balance">
+                  <p className="text-muted-foreground/50 text-sm min-[412px]:text-base mt-4 text-balance text-center lg:text-start">
                     Upload your service info, policies, and product docs. Get a
-                    shareable chat link and an API endpoint that answers using
-                    only your provided knowledge.
+                    shareable chat link, script tag and an API endpoint that
+                    answers using only your provided knowledge.
                   </p>
 
                   <Button asChild className="mt-6 pr-1.5" size={"lg"}>
@@ -98,7 +113,7 @@ export default function HeroSection() {
           </div>
         </section>
       </main>
-      <LogoCloud />
+      {/* <LogoCloud /> */}
     </>
   );
 }

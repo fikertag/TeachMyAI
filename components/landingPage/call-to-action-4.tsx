@@ -12,7 +12,7 @@ const benefits = [
 
 export default function CallToAction() {
   return (
-    <section className="bg-background @container py-24">
+    <section id="pricing" className="bg-background @container py-24">
       <div className="mx-auto max-w-5xl px-6">
         <Card className="@xl:grid-cols-2 grid gap-8 p-6 md:p-8">
           <div>
