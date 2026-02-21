@@ -103,19 +103,20 @@ export default function ChatClient({ slug }: { slug: string }) {
       }
 
       try {
-        const res = await fetch("/api/service", { method: "GET" });
+        const res = await fetch(
+          `/api/public/service/${encodeURIComponent(normalizedSlug)}`,
+          { method: "GET" },
+        );
         const data = (await res.json()) as {
-          services?: Service[];
+          service?: Service;
           error?: string;
         };
 
         if (!res.ok) {
-          throw new Error(data.error || "Failed to load services");
+          throw new Error(data.error || "Failed to load service");
         }
 
-        const match = (data.services ?? []).find(
-          (s) => s.slug === normalizedSlug,
-        );
+        const match = data.service ?? null;
         if (!match) {
           throw new Error(`Service not found for slug: ${normalizedSlug}`);
         }
