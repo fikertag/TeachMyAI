@@ -224,7 +224,7 @@ export default function BuilderPage() {
                         authClient.signOut({
                           fetchOptions: {
                             onSuccess: () => {
-                              router.push("/login"); // redirect to login page
+                              router.push("/signin");
                             },
                           },
                         });
