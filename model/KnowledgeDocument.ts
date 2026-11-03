@@ -3,6 +3,7 @@ import mongoose, { Schema, Document, Model, Types } from "mongoose";
 export interface IKnowledgeDocument extends Document {
   serviceId: Types.ObjectId;
   title: string;
+  preview?: string;
   source: string;
   revokedAt?: Date;
   createdAt: Date;
@@ -18,6 +19,7 @@ const KnowledgeDocumentSchema: Schema<IKnowledgeDocument> =
         required: true,
       },
       title: { type: String, required: true },
+      preview: { type: String, default: "" },
       source: { type: String, default: "api" },
       revokedAt: { type: Date, default: undefined },
     },

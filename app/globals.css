@@ -13,26 +13,26 @@ html {
 :root {
   --radius: 0.625rem;
 
-  --background: #faf7f5;
-  --foreground: oklch(0.3421 0.0379 61.15);
+  --background: oklch(0.985 0.005 250);
+  --foreground: oklch(0.3 0.1 262);
 
   --card: var(--color-white);
-  --card-foreground: oklch(0.3421 0.0379 61.15);
+  --card-foreground: var(--foreground);
 
   --popover: var(--color-white);
-  --popover-foreground: oklch(0.3421 0.0379 61.15);
+  --popover-foreground: var(--foreground);
 
-  --primary: #98785d;
-  --primary-foreground: oklch(0.1448 0 0);
+  --primary: oklch(0.52 0.2 260);
+  --primary-foreground: var(--color-white);
 
   --secondary: --alpha(var(--primary)/15%);
-  --secondary-foreground: oklch(0.3421 0.0379 61.15);
+  --secondary-foreground: var(--foreground);
 
   --muted: --alpha(var(--foreground)/5%);
-  --muted-foreground: oklch(0.4563 0.0061 48.59);
+  --muted-foreground: oklch(0.48 0.05 258);
 
-  --accent: #e3e0d8;
-  --accent-foreground: oklch(0.3467 0.0231 86.12);
+  --accent: oklch(0.94 0.03 250);
+  --accent-foreground: var(--foreground);
 
   --destructive: var(--color-red-700);
   --destructive-foreground: var(--color-white);
@@ -93,4 +93,31 @@ html {
   --shadow-lg: var(--shadow-lg);
   --shadow-xl: var(--shadow-xl);
   --shadow-2xl: var(--shadow-2xl);
+}
+
+.landing-theme {
+  /* PALETTE: sky blue */
+ --background: oklch(0.985 0.005 250);
+    --foreground: oklch(0.3 0.1 262);
+    --primary: oklch(0.52 0.2 260);
+    --muted-foreground: oklch(0.48 0.05 258);
+    --accent: oklch(0.94 0.03 250);
+ 
+  /* Everything below follows from the palette above. Keep as is. */
+  --primary-foreground: var(--color-white);
+ 
+  --card: var(--color-white);
+  --card-foreground: var(--foreground);
+  --popover: var(--color-white);
+  --popover-foreground: var(--foreground);
+ 
+  --secondary: --alpha(var(--primary) / 12%);
+  --secondary-foreground: var(--foreground);
+ 
+  --muted: --alpha(var(--foreground) / 5%);
+  --accent-foreground: var(--foreground);
+ 
+  --border: --alpha(var(--foreground) / 7.5%);
+  --input: --alpha(var(--foreground) / 20%);
+  --ring: var(--primary);
 }

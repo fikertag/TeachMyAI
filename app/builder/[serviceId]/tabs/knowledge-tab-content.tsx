@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -37,7 +38,7 @@ export function KnowledgeTabContent({
   onSuccess: (message: string) => void;
 }) {
   const [knowledgeDocs, setKnowledgeDocs] = useState<KnowledgeDocument[]>([]);
-  const [isLoadingKnowledge, setIsLoadingKnowledge] = useState(false);
+  const [isLoadingKnowledge, setIsLoadingKnowledge] = useState(true);
   const [showAddKnowledge, setShowAddKnowledge] = useState(false);
   const [docTitle, setDocTitle] = useState("");
   const [docText, setDocText] = useState("");
@@ -172,25 +173,24 @@ export function KnowledgeTabContent({
   };
 
   return (
-    <TabsContent value="knowledge" className="mt-4">
+    <TabsContent value="knowledge" className="">
       <Card>
         <CardHeader>
           <CardTitle>Context</CardTitle>
-          <CardDescription>
-            Add context to improve your AI responses.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          <div className="flex justify-end">
+    
+          <CardAction>
             <Button
               type="button"
               variant="outline"
+              size="sm"
               onClick={() => setShowAddKnowledge((v) => !v)}
             >
-              {showAddKnowledge && <X />}
+              {showAddKnowledge && <X className="mr-1.5 h-4 w-4" />}
               {showAddKnowledge ? "Close" : "Add context"}
             </Button>
-          </div>
+          </CardAction>
+        </CardHeader>
+        <CardContent className="grid gap-4">
 
           {showAddKnowledge ? (
             <form onSubmit={ingestKnowledge} className="grid gap-3">
@@ -228,11 +228,27 @@ export function KnowledgeTabContent({
             </form>
           ) : isLoadingKnowledge ? (
             <div className="grid gap-3">
-              {Array.from({ length: 1 }).map((_, i) => (
+              {[1, 2].map((i) => (
                 <div
                   key={i}
-                  className="h-30 animate-pulse rounded-md border bg-background"
-                />
+                  className="rounded-md border bg-background p-4 animate-pulse space-y-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="h-5 w-48 rounded bg-muted" />
+                    <div className="h-4 w-14 rounded-full bg-muted/60" />
+                  </div>
+                  <div className="h-14 rounded border border-border/50 bg-muted/30 p-2 space-y-2">
+                    <div className="h-2.5 w-full rounded bg-muted/60" />
+                    <div className="h-2.5 w-4/5 rounded bg-muted/40" />
+                  </div>
+                  <div className="flex items-center justify-between pt-1">
+                    <div className="h-3 w-28 rounded bg-muted/50" />
+                    <div className="flex gap-2">
+                      <div className="h-8 w-16 rounded bg-muted/60" />
+                      <div className="h-8 w-16 rounded bg-muted/40" />
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           ) : knowledgeDocs.length === 0 ? (
@@ -262,15 +278,21 @@ export function KnowledgeTabContent({
                     key={doc.id}
                     className="rounded-md border bg-background p-4"
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <p className="font-medium">{doc.title}</p>
-                        <p className="text-xs text-muted-foreground">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0 pr-4">
+                        <p className="font-medium text-foreground">{doc.title}</p>
+                        {doc.preview ? (
+                          <p className="mt-1.5 text-xs text-muted-foreground line-clamp-2 bg-muted/40 border border-border/50 rounded p-2 font-mono">
+                            {doc.preview}
+                            {doc.preview.length >= 240 ? "..." : ""}
+                          </p>
+                        ) : null}
+                        <p className="mt-1.5 text-xs text-muted-foreground/80">
                           Source: {doc.source}
                         </p>
                       </div>
                       <span
-                        className={`text-xs font-medium ${isRevoked ? "text-red-500" : "text-green-600"}`}
+                        className={`text-xs font-medium shrink-0 ${isRevoked ? "text-red-500" : "text-green-600"}`}
                       >
                         {isRevoked ? "Revoked" : "Active"}
                       </span>

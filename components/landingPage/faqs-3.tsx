@@ -43,12 +43,12 @@ const faqItems = [
 
 export default function FAQs() {
   return (
-    <section id="faqs" className="bg-background @container py-24">
-      <div className="mx-auto max-w-2xl px-2 md:px-6">
-        <h2 className="text-center font-serif text-4xl font-medium">
+    <section id="faqs" className="bg-background py-16 sm:py-20 lg:py-24 scroll-mt-16">
+      <div className="mx-auto max-w-3xl px-6">
+        <h2 className="text-center font-serif text-3xl sm:text-4xl font-medium">
           Your Questions Answered
         </h2>
-        <Accordion type="single" collapsible className="mt-12">
+        <Accordion type="single" collapsible className="mt-10 sm:mt-12">
           {faqItems.map((item) => (
             <div className="group" key={item.id}>
               <AccordionItem

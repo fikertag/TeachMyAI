@@ -5,7 +5,11 @@ import mongoose from "mongoose";
 import dbConnect from "@/lib/mongoose";
 import RagChunks from "@/model/KnowladgeChunks";
 import ServiceModel from "@/model/service";
-import { decryptApiKey } from "@/lib/api-keys";
+import {
+  decryptApiKey,
+  getApiKeyFromHeaders,
+  authenticateAndConsumeApiKey,
+} from "@/lib/api-keys";
 import { embedTextGemini } from "@/lib/aiUtils/embed";
 import { buildPromptFromConfig } from "@/lib/aiUtils/promptBuilder";
 import { rga_ethify_cfg } from "@/lib/aiUtils/promots";
@@ -154,6 +158,29 @@ function msgToText(message: unknown): string {
   return "";
 }
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, x-api-key, Authorization",
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: corsHeaders });
+}
+
+function jsonWithCors(
+  data: unknown,
+  init?: { status?: number; headers?: HeadersInit },
+) {
+  return NextResponse.json(data, {
+    status: init?.status ?? 200,
+    headers: {
+      ...corsHeaders,
+      ...(init?.headers ?? {}),
+    },
+  });
+}
+
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
@@ -187,36 +214,75 @@ export async function POST(req: NextRequest) {
         ? requestedServiceId.trim()
         : undefined;
 
-    const resolvedServiceId: string | undefined = serviceIdFromBody;
+    let resolvedServiceId: string | undefined = serviceIdFromBody;
+
+    // Check for API key in headers
+    const rawApiKey = getApiKeyFromHeaders(req.headers);
+    if (rawApiKey) {
+      console.log(
+        `[chat] API key provided in request headers (last 4: ...${rawApiKey.slice(-4)})`,
+      );
+      const authResult = await authenticateAndConsumeApiKey({
+        apiKey: rawApiKey,
+      });
+      if (!authResult.ok) {
+        console.warn(
+          `[chat 403/auth] API key verification failed: status=${authResult.status}, error=${authResult.error}`,
+        );
+        return jsonWithCors(
+          { error: authResult.error },
+          { status: authResult.status },
+        );
+      }
+      if (!resolvedServiceId) {
+        resolvedServiceId = authResult.serviceId;
+        console.log(
+          `[chat] serviceId automatically resolved from API key: ${resolvedServiceId}`,
+        );
+      } else if (
+        String(resolvedServiceId).trim() !==
+        String(authResult.serviceId).trim()
+      ) {
+        console.warn(
+          `[chat 403] Service ID mismatch: requested="${resolvedServiceId}" vs apiKeyService="${authResult.serviceId}"`,
+        );
+        return jsonWithCors(
+          {
+            error: "API key does not belong to the specified service",
+            details: {
+              requestedServiceId: resolvedServiceId,
+              apiKeyServiceId: authResult.serviceId,
+            },
+          },
+          { status: 403 },
+        );
+      }
+    }
 
     if (!resolvedServiceId) {
-      return NextResponse.json(
+      console.warn("[chat 400] No serviceId provided or found via API key");
+      return jsonWithCors(
         { error: "serviceId is required" },
         { status: 400 },
       );
     }
 
-    if (
-      resolvedServiceId &&
-      !mongoose.Types.ObjectId.isValid(resolvedServiceId)
-    ) {
-      return NextResponse.json({ error: "Invalid serviceId" }, { status: 400 });
+    if (!mongoose.Types.ObjectId.isValid(resolvedServiceId)) {
+      console.warn(`[chat 400] Invalid ObjectId serviceId: ${resolvedServiceId}`);
+      return jsonWithCors({ error: "Invalid serviceId" }, { status: 400 });
     }
 
-    const serviceObjectId = resolvedServiceId
-      ? new mongoose.Types.ObjectId(resolvedServiceId)
-      : undefined;
+    const serviceObjectId = new mongoose.Types.ObjectId(resolvedServiceId);
 
-    const service = serviceObjectId
-      ? await ServiceModel.findById(serviceObjectId)
-          .select(
-            "systemPrompt promptConfig allowedOrigins geminiApiKeyEncrypted",
-          )
-          .lean()
-      : null;
+    const service = await ServiceModel.findById(serviceObjectId)
+      .select(
+        "systemPrompt promptConfig allowedOrigins geminiApiKeyEncrypted",
+      )
+      .lean();
 
     if (!service) {
-      return NextResponse.json({ error: "Service not found" }, { status: 404 });
+      console.warn(`[chat 404] Service not found in DB: ${resolvedServiceId}`);
+      return jsonWithCors({ error: "Service not found" }, { status: 404 });
     }
 
     const allowedOrigins =
@@ -234,7 +300,10 @@ export async function POST(req: NextRequest) {
 
     if (isEmbedRequest(req, embedReferrer)) {
       if (normalizedAllowedOrigins.length === 0) {
-        return NextResponse.json(
+        console.warn(
+          `[chat 403] Embed disabled: service ${resolvedServiceId} has no allowed origins configured`,
+        );
+        return jsonWithCors(
           {
             error:
               "Embed is disabled for this service. Add allowed origins in service settings.",
@@ -252,10 +321,14 @@ export async function POST(req: NextRequest) {
         !requestOrigin ||
         !isAllowedOrigin(requestOrigin, normalizedAllowedOrigins)
       ) {
-        return NextResponse.json(
+        console.warn(
+          `[chat 403] Embed origin rejected: requestOrigin="${requestOrigin}", allowed=${JSON.stringify(normalizedAllowedOrigins)}`,
+        );
+        return jsonWithCors(
           {
             error:
               "Embed is not allowed from this domain. Add it to allowed origins in service settings.",
+            origin: requestOrigin,
           },
           { status: 403 },
         );
@@ -284,9 +357,12 @@ export async function POST(req: NextRequest) {
     if (!vector)
       return NextResponse.json({ error: "Embedding failed" }, { status: 500 });
 
-    // 2️⃣ Vector search
-    const chunks = serviceObjectId
-      ? await RagChunks.aggregate([
+    // 2️⃣ Vector search with error handling and fallback
+    let chunks: ChunkHit[] = [];
+
+    if (serviceObjectId) {
+      try {
+        chunks = await RagChunks.aggregate([
           {
             $vectorSearch: {
               queryVector: vector,
@@ -304,8 +380,34 @@ export async function POST(req: NextRequest) {
               score: { $meta: "vectorSearchScore" },
             },
           },
-        ])
-      : [];
+        ]);
+        console.log(
+          `[chat] Vector search returned ${chunks.length} chunks for service ${resolvedServiceId}`,
+        );
+      } catch (vectorErr) {
+        console.warn(
+          "[chat] Vector search error (Atlas 'rga_index' may be missing or building):",
+          vectorErr instanceof Error ? vectorErr.message : vectorErr,
+        );
+      }
+
+      // Fallback: If vector search returned 0 chunks (index missing in Atlas, still building, or 0 match),
+      // retrieve available chunks for this service so the assistant has context to answer from.
+      if (chunks.length === 0) {
+        console.warn(
+          `[chat] Vector search returned 0 chunks. Using fallback chunks for service ${resolvedServiceId}`,
+        );
+        const fallbackDocs = await RagChunks.find({ serviceId: serviceObjectId })
+          .limit(5)
+          .select("chunkText")
+          .lean();
+
+        chunks = fallbackDocs.map((doc) => ({
+          chunkText: doc.chunkText,
+          score: 1,
+        }));
+      }
+    }
 
     // 3️⃣ Build retrieved context
     const context = chunks
@@ -368,16 +470,16 @@ ${c.chunkText}`,
     const res = await model.invoke(finalPrompt);
     const answer = msgToText(res);
 
-    return NextResponse.json({
+    return jsonWithCors({
       response: answer,
     });
   } catch (err) {
     if (err instanceof z.ZodError) {
-      return NextResponse.json({ error: err.flatten() }, { status: 400 });
+      return jsonWithCors({ error: err.flatten() }, { status: 400 });
     }
 
     console.error(err);
-    return NextResponse.json(
+    return jsonWithCors(
       { error: "there was an error processing your request" },
       { status: 500 },
     );

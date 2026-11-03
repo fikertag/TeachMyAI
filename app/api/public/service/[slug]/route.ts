@@ -33,6 +33,18 @@ export async function GET(
         slug: (service as { slug: string }).slug,
         description: (service as { description?: string }).description ?? "",
         color: (service as { color?: string }).color,
+        quickPrompts: Array.isArray(
+          (service as { quickPrompts?: unknown }).quickPrompts,
+        )
+          ? (
+              service as {
+                quickPrompts: Array<{ title: string; prompt: string }>;
+              }
+            ).quickPrompts.map((qp) => ({
+              title: qp.title,
+              prompt: qp.prompt,
+            }))
+          : [],
       },
     });
   } catch (err) {

@@ -18,15 +18,14 @@ const GLODIE_AVATAR = "https://avatars.githubusercontent.com/u/99137927?v=4";
 
 export default function FeaturesSection() {
   return (
-    <section id="features">
-      <div className="pb-20">
-        <div className="mx-auto w-full max-w-6xl px-6">
-          <div>
-            <h2 className="text-foreground max-w-2xl text-balance text-4xl font-semibold">
-              Build, train, and deploy your own AI assistant in minutes
-            </h2>
-          </div>
-          <div className="mt-16 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <section id="features" className="py-16 sm:py-20 lg:py-24 scroll-mt-16 bg-background">
+      <div className="mx-auto w-full max-w-6xl px-6">
+        <div>
+          <h2 className="text-foreground max-w-2xl text-balance text-3xl sm:text-4xl font-semibold">
+            Build, train, and deploy your own AI assistant in minutes
+          </h2>
+        </div>
+        <div className="mt-12 sm:mt-16 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             <Card className="overflow-hidden p-6">
               <Target className="text-primary size-5" />
               <h3 className="text-foreground mt-5 text-lg font-semibold">
@@ -66,7 +65,6 @@ export default function FeaturesSection() {
             </Card>
           </div>
         </div>
-      </div>
     </section>
   );
 }

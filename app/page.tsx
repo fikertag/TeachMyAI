@@ -6,21 +6,22 @@ import Content from "@/components/landingPage/content-3";
 // import Pricing from "@/components/landingPage/pricing-1";
 import FAQs from "@/components/landingPage/faqs-3";
 import CallToAction from "@/components/landingPage/call-to-action-4";
-// import Footer from "@/components/landingPage/footer-5";
+import Footer from "@/components/landingPage/footer-5";
 import FeaturesSection from "@/components/landingPage/features-six";
 import HowItWorks from "@/components/landingPage/how-it-works";
 import ComingSoon from "@/components/landingPage/coming-soon";
 
 export default function Page() {
   return (
-    <>
+    <div className="landing-theme bg-background text-foreground ">
       <HeroSection />
-      <FeaturesSection />
+      {/* <FeaturesSection /> */}
       <HowItWorks />
-      <Content />
+      {/* <Content /> */}
       <FAQs />
-      <CallToAction />
-      <ComingSoon />
-    </>
+      {/* <CallToAction />
+      <ComingSoon /> */}
+      {/* <Footer /> */}
+    </div >
   );
 }

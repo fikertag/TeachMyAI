@@ -32,6 +32,7 @@ export type KnowledgeDocument = {
   id: string;
   serviceId: string;
   title: string;
+  preview?: string;
   source: string;
   revokedAt?: string;
 };

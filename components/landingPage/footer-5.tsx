@@ -1,25 +1,26 @@
 import Link from "next/link";
+
 const links = [
   { label: "How it works", href: "#how-it-works" },
-  { label: "API", href: "#api" },
+  { label: "Features", href: "#features" },
+  { label: "FAQs", href: "#faqs" },
   { label: "Pricing", href: "#pricing" },
-  { label: "FAQ", href: "#faq" },
   { label: "Get started", href: "/builder" },
 ];
 
 export default function Footer() {
   return (
-    <footer className="bg-background @container py-12">
-      <div className="mx-auto max-w-2xl px-6">
-        <div className="flex flex-col">
+    <footer className="bg-background border-t py-12">
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
           <Link
             href="/"
             aria-label="go home"
-            className="hover:bg-foreground/5 -ml-1.5 flex size-8 rounded-lg *:m-auto"
+            className="text-lg font-semibold tracking-tight hover:opacity-80 transition-opacity"
           >
-            TeachMyAi{" "}
+            TeachMyAi
           </Link>
-          <nav className="my-8 flex flex-wrap gap-x-8 gap-y-2">
+          <nav className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2">
             {links.map((link) => (
               <Link
                 key={link.label}
@@ -31,8 +32,8 @@ export default function Footer() {
             ))}
           </nav>
 
-          <p className="text-muted-foreground mt-2 border-t pt-6 text-sm">
-            &copy; {new Date().getFullYear()} TeachMyAI.
+          <p className="text-muted-foreground text-sm">
+            &copy; {new Date().getFullYear()} TeachMyAi. All rights reserved.
           </p>
         </div>
       </div>

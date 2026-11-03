@@ -65,12 +65,13 @@ export default function ChatClient({ slug }: { slug: string }) {
   };
 
   const quickPrompts = useMemo(() => {
-    const dbPrompts =
-      service?.quickPrompts && service.quickPrompts.length > 0
-        ? service.quickPrompts
-        : undefined;
+    if (Array.isArray(service?.quickPrompts)) {
+      return service.quickPrompts;
+    }
 
-    if (dbPrompts) return dbPrompts;
+    if (isLoadingService) {
+      return [];
+    }
 
     return [
       {
@@ -86,7 +87,7 @@ export default function ChatClient({ slug }: { slug: string }) {
         prompt: "I have a specific question",
       },
     ];
-  }, [service?.quickPrompts, service?.name]);
+  }, [service?.quickPrompts, service?.name, isLoadingService]);
 
   useEffect(() => {
     let cancelled = false;
@@ -172,7 +173,9 @@ export default function ChatClient({ slug }: { slug: string }) {
     }
   };
 
-  const sendMessage = async () => {
+  const autoSentRef = useRef(false);
+
+  const sendMessage = async (overrideText?: string) => {
     if (isSending) return;
 
     if (!service?.id) {
@@ -180,7 +183,7 @@ export default function ChatClient({ slug }: { slug: string }) {
       return;
     }
 
-    const text = input.trim();
+    const text = (overrideText ?? input).trim();
     if (!text) return;
 
     setIsSending(true);
@@ -228,6 +231,23 @@ export default function ChatClient({ slug }: { slug: string }) {
       setIsSending(false);
     }
   };
+
+  useEffect(() => {
+    if (!service || isLoadingService || autoSentRef.current) return;
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+    const initialQuery = params.get("q") || params.get("message");
+    if (initialQuery && initialQuery.trim()) {
+      autoSentRef.current = true;
+      const url = new URL(window.location.href);
+      url.searchParams.delete("q");
+      url.searchParams.delete("message");
+      window.history.replaceState({}, "", url.toString());
+
+      void sendMessage(initialQuery.trim());
+    }
+  }, [service, isLoadingService]);
 
   const retryMessage = async (errorIndex: number, failedMessage: string) => {
     if (!service?.id || isSending || !failedMessage.trim()) return;
@@ -277,19 +297,32 @@ export default function ChatClient({ slug }: { slug: string }) {
     <div className="h-svh ">
       <div className="mx-auto flex h-svh w-full max-w-4xl flex-col px-4 pb-6 pt-4 sm:px-6 ">
         <Card className="flex h-full min-h-0 flex-1 flex-col border-0 bg-transparent -my-6">
-          <CardHeader>
-            <CardDescription>
-              {isLoadingService
-                ? "Loading service..."
-                : service
-                  ? `chat with ${service.name}`
-                  : ""}
-            </CardDescription>
-          </CardHeader>
           <CardContent className="flex min-h-0 flex-1 flex-col gap-4 p-0">
             <ScrollArea className="min-h-0 flex-1">
               <div className="flex min-h-full flex-col gap-4 px-6 pb-6 pt-4">
-                {messages.length === 0 ? (
+                {isLoadingService ? (
+                  <div className="flex h-full flex-col justify-center my-auto pb-20 gap-6 animate-pulse">
+                    <div className="space-y-3 flex flex-col items-center">
+                      <div className="h-10 w-64 rounded-xl bg-muted" />
+                      <div className="h-4 w-96 max-w-full rounded-md bg-muted/70" />
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-3 mt-5">
+                      <div className="h-24 rounded-xl border bg-muted/30 p-4 space-y-2.5">
+                        <div className="h-4 w-28 rounded bg-muted" />
+                        <div className="h-3 w-40 rounded bg-muted/60" />
+                      </div>
+                      <div className="h-24 rounded-xl border bg-muted/30 p-4 space-y-2.5">
+                        <div className="h-4 w-32 rounded bg-muted" />
+                        <div className="h-3 w-36 rounded bg-muted/60" />
+                      </div>
+                      <div className="h-24 rounded-xl border bg-muted/30 p-4 space-y-2.5">
+                        <div className="h-4 w-24 rounded bg-muted" />
+                        <div className="h-3 w-44 rounded bg-muted/60" />
+                      </div>
+                    </div>
+                  </div>
+                ) : messages.length === 0 ? (
                   <div className="flex h-full flex-col justify-center my-auto pb-20 gap-6">
                     <div className="space-y-2 flex flex-col items-center">
                       <h2
@@ -305,43 +338,45 @@ export default function ChatClient({ slug }: { slug: string }) {
                       </p>
                     </div>
 
-                    <div className="grid gap-3 sm:grid-cols-3 mt-5">
-                      {quickPrompts.map((prompt) => (
-                        <Card
-                          key={prompt.title}
-                          className="cursor-pointer transition hover:shadow-xl"
-                          style={{
-                            backgroundColor: service?.color + "10",
-                            borderColor: service?.color + "20",
-                          }}
-                          onClick={() => {
-                            setInput(prompt.prompt);
-                            focusChatInput();
-                          }}
-                        >
-                          <CardHeader className="pb-2">
-                            <CardTitle
-                              className="text-sm"
-                              style={{ color: service?.color }}
-                            >
-                              {prompt.title}
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent
-                            className="text-xs text-muted-foreground"
-                            title={prompt.prompt}
+                    {quickPrompts.length > 0 && (
+                      <div className="grid gap-3 sm:grid-cols-3 mt-5">
+                        {quickPrompts.map((prompt) => (
+                          <Card
+                            key={prompt.title}
+                            className="cursor-pointer transition hover:shadow-xl"
                             style={{
-                              display: "-webkit-box",
-                              WebkitBoxOrient: "vertical",
-                              WebkitLineClamp: 1,
-                              overflow: "hidden",
+                              backgroundColor: service?.color + "10",
+                              borderColor: service?.color + "20",
+                            }}
+                            onClick={() => {
+                              setInput(prompt.prompt);
+                              focusChatInput();
                             }}
                           >
-                            {prompt.prompt}
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
+                            <CardHeader className="pb-2">
+                              <CardTitle
+                                className="text-sm"
+                                style={{ color: service?.color }}
+                              >
+                                {prompt.title}
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent
+                              className="text-xs text-muted-foreground"
+                              title={prompt.prompt}
+                              style={{
+                                display: "-webkit-box",
+                                WebkitBoxOrient: "vertical",
+                                WebkitLineClamp: 1,
+                                overflow: "hidden",
+                              }}
+                            >
+                              {prompt.prompt}
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="flex flex-col gap-4">

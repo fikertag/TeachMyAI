@@ -160,7 +160,7 @@ export default function BuilderPage() {
   return (
     <div className="relative min-h-svh overflow-hidden bg-muted">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,hsl(var(--primary)/0.12),transparent_35%),radial-gradient(circle_at_80%_0%,hsl(var(--accent)/0.12),transparent_30%)]" />
-      <div className="relative mx-auto w-full max-w-5xl p-4 sm:p-6">
+      <div className="relative mx-auto w-full max-w-7xl p-4 sm:p-6">
         <Card className="mb-6 border-primary/20 bg-linear-to-br from-background via-background to-primary/5">
           <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>

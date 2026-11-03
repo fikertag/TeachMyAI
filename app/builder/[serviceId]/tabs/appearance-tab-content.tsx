@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TabsContent } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
+import { Plus, Trash2 } from "lucide-react";
 
 import type { Service } from "./types";
 
@@ -31,47 +31,16 @@ export function AppearanceTabContent({
   );
   const [serviceQuickPromptsDraft, setServiceQuickPromptsDraft] = useState<
     Array<{ title: string; prompt: string }>
-  >(
-    service.quickPrompts ?? [
-      {
-        title: "Get started",
-        prompt: `Tell me more about ${service.name ?? "this service"}`,
-      },
-      {
-        title: "Explore capabilities",
-        prompt: "What can you help me with?",
-      },
-      {
-        title: "Ask a question",
-        prompt: "I have a specific question",
-      },
-    ],
-  );
+  >(service.quickPrompts ?? []);
   const [isSavingColor, setIsSavingColor] = useState(false);
   const [isSavingQuickPrompts, setIsSavingQuickPrompts] = useState(false);
 
-  const defaultPrompts = useMemo(
-    () => [
-      {
-        title: "Get started",
-        prompt: `Tell me more about ${service.name ?? "this service"}`,
-      },
-      {
-        title: "Explore capabilities",
-        prompt: "What can you help me with?",
-      },
-      {
-        title: "Ask a question",
-        prompt: "I have a specific question",
-      },
-    ],
-    [service.name],
-  );
+
 
   useEffect(() => {
     setServiceColorDraft(service.color ?? "#ffffff");
-    setServiceQuickPromptsDraft(service.quickPrompts ?? defaultPrompts);
-  }, [service, defaultPrompts]);
+    setServiceQuickPromptsDraft(service.quickPrompts ?? []);
+  }, [service]);
 
   const saveColor = async () => {
     onError("");
@@ -191,11 +160,7 @@ export function AppearanceTabContent({
       // fall back to local service state
     }
 
-    const dbPrompts = (
-      latestPromptsFromDb ??
-      service.quickPrompts ??
-      defaultPrompts
-    )
+    const dbPrompts = (latestPromptsFromDb ?? service.quickPrompts ?? [])
       .map((prompt) => ({
         title: prompt.title.trim(),
         prompt: prompt.prompt.trim(),
@@ -263,146 +228,163 @@ export function AppearanceTabContent({
             Customize the visual appearance of your service.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4">
-          <div className="grid gap-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="service-color">Color</Label>
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => void saveColor()}
-                disabled={isSavingColor}
-              >
-                {isSavingColor ? "Saving..." : "Save"}
-              </Button>
-            </div>
-            <div className="flex items-center gap-3">
-              <div
-                className="w-12 h-10 rounded-md border-2 border-border cursor-pointer relative overflow-hidden"
-                style={{ backgroundColor: serviceColorDraft }}
-                onClick={() =>
-                  document.getElementById("service-color")?.click()
-                }
-              >
-                <input
-                  id="service-color"
-                  type="color"
-                  value={serviceColorDraft}
-                  onChange={(e) => {
-                    setServiceColorDraft(e.target.value);
-                    onError("");
-                  }}
-                  disabled={isSavingColor}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                />
-              </div>
-              <div className="flex-1">
-                <div className="text-sm font-mono text-muted-foreground bg-muted px-3 py-2 rounded-md border">
-                  {serviceColorDraft.toUpperCase()}
+        <CardContent className="grid gap-6">
+
+          {/* Color Section */}
+          <div className="space-y-2">
+            <p className="font-semibold">Accent Color</p>
+            <div className="rounded-md border bg-background p-4">
+              <div className="flex items-center gap-3">
+                {/* Color swatch — click to open picker */}
+                <div
+                  className="h-9 w-9 shrink-0 rounded-md border-2 border-border cursor-pointer relative overflow-hidden"
+                  style={{ backgroundColor: serviceColorDraft }}
+                  onClick={() =>
+                    document.getElementById("service-color")?.click()
+                  }
+                >
+                  <input
+                    id="service-color"
+                    type="color"
+                    value={serviceColorDraft}
+                    onChange={(e) => {
+                      setServiceColorDraft(e.target.value);
+                      onError("");
+                    }}
+                    disabled={isSavingColor}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
                 </div>
+
+                {/* Hex value */}
+                <span className="text-sm font-mono text-muted-foreground">
+                  {serviceColorDraft.toUpperCase()}
+                </span>
+
+                {/* Spacer */}
+                <div className="flex-1" />
+
+                {/* Save button */}
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => void saveColor()}
+                  disabled={isSavingColor}
+                  className="text-white shrink-0"
+                >
+                  {isSavingColor ? "Saving..." : "Save color"}
+                </Button>
               </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Click the swatch to open the color picker. This color is used in the chat interface.
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Click the color square to open the color picker. This color will
-              be used in the chat interface.
-            </p>
           </div>
 
-          <div className="grid gap-4 mt-2">
-            <div className="flex items-center justify-between gap-3">
-              <div className="space-y-1">
-                <Label className="text-base font-semibold">Quick prompts</Label>
-                <p className="text-sm text-muted-foreground">
-                  These buttons are shown at the top of the chat.
-                </p>
-              </div>
-              <span className="inline-flex items-center rounded-full border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                {serviceQuickPromptsDraft.length}/10 prompts
+          {/* Quick Prompts Section */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-semibold">Quick Prompts</p>
+              <span className="text-xs text-muted-foreground">
+                {serviceQuickPromptsDraft.length}/10
               </span>
             </div>
 
-            <div className="space-y-3">
+            <div className="rounded-md border bg-background p-4 grid gap-3">
+              {serviceQuickPromptsDraft.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-2">
+                  No quick prompts yet. Add one below.
+                </p>
+              )}
+
               {serviceQuickPromptsDraft.map((prompt, index) => (
                 <div
                   key={index}
-                  className="rounded-xl border bg-background p-4 shadow-sm"
+                  className="grid gap-2 pb-3 border-b last:border-b-0 last:pb-0"
                 >
-                  <div className="mb-4 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-muted px-2 text-xs font-semibold text-muted-foreground">
-                        {index + 1}
-                      </span>
-                      <p className="text-sm font-semibold">
-                        {prompt.title.trim() || "Untitled prompt"}
-                      </p>
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      {prompt.prompt.length}/1000
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-muted-foreground">
+                      {index + 1}
                     </span>
-                  </div>
-
-                  <div className="grid gap-3">
-                    <div className="grid gap-2">
-                      <Label
-                        htmlFor={`prompt-title-${index}`}
-                        className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                      >
-                        Button title
-                      </Label>
+                    <div className="grid grid-cols-2 gap-2 flex-1">
                       <Input
                         id={`prompt-title-${index}`}
                         type="text"
                         value={prompt.title}
                         onChange={(e) => {
                           const newPrompts = [...serviceQuickPromptsDraft];
-                          newPrompts[index].title = e.target.value;
+                          newPrompts[index] = { ...newPrompts[index], title: e.target.value };
                           setServiceQuickPromptsDraft(newPrompts);
                           onError("");
                         }}
                         disabled={isSavingQuickPrompts}
-                        placeholder="Ex: Get started"
+                        placeholder="Button title"
                         maxLength={100}
-                        className="bg-muted/40"
+                        className="bg-background text-sm h-8"
                       />
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label
-                        htmlFor={`prompt-text-${index}`}
-                        className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                      >
-                        Message sent
-                      </Label>
-                      <Textarea
+                      <Input
                         id={`prompt-text-${index}`}
                         value={prompt.prompt}
                         onChange={(e) => {
                           const newPrompts = [...serviceQuickPromptsDraft];
-                          newPrompts[index].prompt = e.target.value;
+                          newPrompts[index] = { ...newPrompts[index], prompt: e.target.value };
                           setServiceQuickPromptsDraft(newPrompts);
                           onError("");
                         }}
                         disabled={isSavingQuickPrompts}
-                        className="min-h-20 resize-none bg-muted/40"
-                        placeholder="Ex: Tell me more about this service"
+                        placeholder="Message sent to AI"
                         maxLength={1000}
+                        className="bg-background text-sm h-8"
                       />
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newPrompts = serviceQuickPromptsDraft.filter((_, i) => i !== index);
+                        setServiceQuickPromptsDraft(newPrompts);
+                      }}
+                      disabled={isSavingQuickPrompts}
+                      className="shrink-0 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
+                      aria-label="Remove prompt"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 </div>
               ))}
-            </div>
 
-            <div className="flex justify-end">
-              <Button
-                type="button"
-                onClick={() => void saveQuickPrompts()}
-                disabled={isSavingQuickPrompts}
-              >
-                {isSavingQuickPrompts ? "Saving..." : "Save"}
-              </Button>
+              {/* Add row + Save row */}
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={isSavingQuickPrompts || serviceQuickPromptsDraft.length >= 10}
+                  onClick={() => {
+                    setServiceQuickPromptsDraft([
+                      ...serviceQuickPromptsDraft,
+                      { title: "", prompt: "" },
+                    ]);
+                  }}
+                  className="gap-1.5"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add prompt
+                </Button>
+
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => void saveQuickPrompts()}
+                  disabled={isSavingQuickPrompts}
+                  className="text-white"
+                >
+                  {isSavingQuickPrompts ? "Saving..." : "Save prompts"}
+                </Button>
+              </div>
             </div>
           </div>
+
         </CardContent>
       </Card>
     </TabsContent>

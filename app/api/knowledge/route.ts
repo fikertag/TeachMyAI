@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import dbConnect from "@/lib/mongoose";
 import { auth } from "@/lib/auth";
 import KnowledgeDocument from "@/model/KnowledgeDocument";
+import RagChunks from "@/model/KnowladgeChunks";
 import ServiceModel from "@/model/service";
 
 export const runtime = "nodejs";
@@ -52,21 +53,41 @@ export async function GET(req: Request) {
 
     const docs = await KnowledgeDocument.find({ serviceId: serviceObjectId })
       .sort({ createdAt: -1 })
-      .select("_id serviceId title source revokedAt createdAt updatedAt")
+      .select("_id serviceId title preview source revokedAt createdAt updatedAt")
       .lean();
 
+    const docsWithPreview = await Promise.all(
+      docs.map(async (d) => {
+        let preview = (d as { preview?: string }).preview ?? "";
+        if (!preview) {
+          const firstChunk = await RagChunks.findOne({
+            documentId: d._id,
+          })
+            .sort({ index: 1 })
+            .select("chunkText")
+            .lean();
+          if (firstChunk?.chunkText) {
+            preview = firstChunk.chunkText.slice(0, 240);
+          }
+        }
+
+        return {
+          id: d._id.toString(),
+          serviceId: (
+            d as { serviceId: mongoose.Types.ObjectId }
+          ).serviceId.toString(),
+          title: (d as { title: string }).title,
+          preview,
+          source: (d as { source: string }).source,
+          revokedAt: (d as { revokedAt?: Date }).revokedAt,
+          createdAt: d.createdAt,
+          updatedAt: d.updatedAt,
+        };
+      }),
+    );
+
     return NextResponse.json({
-      documents: docs.map((d) => ({
-        id: d._id.toString(),
-        serviceId: (
-          d as { serviceId: mongoose.Types.ObjectId }
-        ).serviceId.toString(),
-        title: (d as { title: string }).title,
-        source: (d as { source: string }).source,
-        revokedAt: (d as { revokedAt?: Date }).revokedAt,
-        createdAt: d.createdAt,
-        updatedAt: d.updatedAt,
-      })),
+      documents: docsWithPreview,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";

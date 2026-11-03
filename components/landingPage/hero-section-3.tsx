@@ -1,97 +1,91 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import { AudioLines, Mic2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HeroHeader } from "./header";
-import {
-  AudioLines,
-  ChevronRight,
-  MessageCircle,
-  Mic2,
-  Plus,
-} from "lucide-react";
-import Image from "next/image";
-// import LogoCloud from "@/components/landingPage/logo-cloud-2";
-import { Merriweather_Sans } from "next/font/google";
 
-const cascadia = Merriweather_Sans({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
-  style: ["normal", "italic"],
+// Staggered reveal for the demo chat. Inline styles keep the delay and
+// fill-mode working regardless of which animation utilities are installed;
+// `motion-reduce:animate-none` shows everything immediately instead.
+const reveal = (delayMs: number): CSSProperties => ({
+  animationDelay: `${delayMs}ms`,
+  animationFillMode: "both",
 });
 
 export default function HeroSection() {
   return (
     <>
-      <HeroHeader />
+    <div className="min-h-screen w-full relative bg-white">
+  {/* Cool Blue Glow Top */}
+  <div
+    className="absolute inset-0 z-0"
+    style={{
+      background: "#ffffff",
+      backgroundImage: `
+        radial-gradient(
+          circle at top center,
+          rgba(70, 130, 180, 0.5),
+          transparent 70%
+        )
+      `,
+      filter: "blur(80px)",
+      backgroundRepeat: "no-repeat",
+    }}
+  />
+ <HeroHeader />
       <main className="overflow-hidden">
-        <section className="bg-background">
-          <div className="relative md:py-45 py-35">
-            <div
-              className="mask-radial-from-45% mask-radial-to-75% mask-radial-at-top mask-radial-[75%_100%] 
-  aspect-2/3 absolute inset-0 
-   blur-xs
-  md:aspect-square lg:aspect-video dark:opacity-70"
-            >
-              <Image
-                src="/landing.avif"
-                alt="hero background"
-                width={2198}
-                height={1685}
-                className="h-full w-full object-cover object-top brightness-105"
-              />
-            </div>
-
-            <div className="relative z-10 mx-auto w-full max-w-7xl lg:px-7 sm:pl-6">
-              <div className="flex items-center justify-between flex-col lg:flex-row">
-                <div
-                  className={`lg:max-w-2xl max-w-4xl  max-sm:px-6 ${cascadia.className} flex flex-col items-center lg:items-start`}
-                >
-                  <h1 className="text-balance cascadia-mono-stayled text-[40px] leading-12 min-[412px]:text-5xl text-center lg:text-start font-medium sm:text-6xl lg:leading-17">
-                    Train your Own AI and use It <br /> anywere
+        <section className="landing-hero-bg relative">
+          <div className="relative pt-28 pb-16 sm:pt-32 sm:pb-20 lg:pb-24">
+            <div className="relative z-10 mx-auto w-full max-w-7xl px-6 lg:px-8">
+              <div className="grid items-center  gap-12 lg:grid-cols-2  ">
+                {/* Copy */}
+                <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
+                  <h1 className="text-balance text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
+                    <span className="block">Teach your AI once.</span>
+                    <span className="block">Use it anywhere.</span>
                   </h1>
-                  <p className="text-muted-foreground/50 text-sm min-[412px]:text-base mt-4 text-balance text-center lg:text-start">
-                    Upload your service info, policies, and product docs. Get a
-                    shareable chat link, script tag and an API endpoint that
-                    answers using only your provided knowledge.
-                  </p>
 
-                  <Button asChild className="mt-6 pr-1.5" size={"lg"}>
-                    <Link href="/builder">
-                      <span className="text-nowrap text-amber-50">
-                        Create your assistant
-                      </span>
-                      <ChevronRight className="opacity-50 text-amber-50" />
-                    </Link>
-                  </Button>
+                  <p className="text-muted-foreground mt-6 max-w-md text-pretty text-base leading-relaxed sm:text-lg">
+                    Add your documents, FAQs and policies. Your assistant
+                    answers questions about your business from them, wherever
+                    you put it.
+                  </p>
+{/* 
+                  <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                    <Button asChild size="lg">
+                      <Link href="/builder">Create your assistant</Link>
+                    </Button>
+                    <Button asChild size="lg" variant="outline">
+                      <Link href="/#how-it-works">See how it works</Link>
+                    </Button>
+                  </div> */}
                 </div>
+
+                {/* Demo chat (decorative) */}
                 <div
                   aria-hidden
-                  className="mask-y-from-50% relative max-md:mx-auto max-md:*:scale-90"
+                  className="bg-card ring-border/60 shadow-foreground/5 mx-auto w-full max-w-md rounded-2xl border p-4 shadow-xl ring-1 sm:p-5 lg:mr-0"
                 >
-                  {[
-                    "What does your service include?",
-                    "What is your refund policy?",
-                    "How do I contact support?",
-                    "Do you offer cancellations?",
-                    "What are your business hours?",
-                    "How does onboarding work?",
-                    "Can I update the knowledge later?",
-                    "Do you have a public chat link I can share?",
-                    "Is there an API for developers?",
-                    "What information do you use to answer?",
-                    "What if the assistant doesn’t know the answer?",
-                    "How do I embed this on my website?",
-                  ].map((prompt, index) => (
+                  <div className="flex flex-col gap-3 text-sm leading-relaxed">
                     <div
-                      key={index}
-                      className="text-muted-foreground flex items-center gap-2 px-14 py-2 text-sm"
+                      className="bg-primary text-primary-foreground animate-in fade-in-0 slide-in-from-bottom-2 motion-reduce:animate-none ml-auto max-w-[80%] rounded-2xl rounded-br-md px-4 py-2.5 duration-500"
+                      style={reveal(300)}
                     >
-                      <MessageCircle className="size-3.5 opacity-50" />
-                      <span className="text-nowrap">{prompt}</span>
+                      What is your refund policy?
                     </div>
-                  ))}
-                  <div className="bg-card min-w-sm ring-border shadow-foreground/6.5 dark:shadow-black/6.5 absolute inset-0 m-auto mt-auto flex h-fit justify-between gap-3 rounded-full p-2 shadow-xl ring-1 sm:inset-2">
+                    <div
+                      className="bg-muted animate-in fade-in-0 slide-in-from-bottom-2 motion-reduce:animate-none mr-auto max-w-[85%] rounded-2xl rounded-bl-md px-4 py-2.5 duration-500"
+                      style={reveal(1100)}
+                    >
+                      You can get a full refund within 14 days of purchase.
+                      After that, we offer store credit.
+                    </div>
+                  </div>
+
+                  <div className="bg-background mt-5 flex items-center justify-between gap-3 rounded-full border p-1.5">
                     <div className="flex items-center gap-2">
-                      <div className="hover:bg-muted flex size-9 cursor-pointer rounded-full *:m-auto *:size-4">
+                      <div className="hover:bg-muted flex size-9 rounded-full *:m-auto *:size-4">
                         <Plus />
                       </div>
                       <div className="text-muted-foreground text-sm">
@@ -99,21 +93,38 @@ export default function HeroSection() {
                       </div>
                     </div>
                     <div className="flex items-center gap-0.5">
-                      <div className="hover:bg-muted flex size-9 cursor-pointer rounded-full *:m-auto *:size-4">
+                      <div className="hover:bg-muted flex size-9 rounded-full *:m-auto *:size-4">
                         <Mic2 />
                       </div>
-                      <div className="bg-foreground text-background flex size-9 cursor-pointer rounded-full *:m-auto *:size-4 hover:brightness-110">
+                      <div className="bg-foreground text-background flex size-9 rounded-full *:m-auto *:size-4">
                         <AudioLines />
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
+
+              {/* Product preview */}
+              <div className="relative mx-auto mt-16 max-w-5xl">
+                <div className="border-border/70 bg-card/60 ring-border/50 rounded-2xl border p-2 shadow-2xl ring-1 backdrop-blur-md sm:p-3">
+                  <div className="border-border/40 bg-background overflow-hidden rounded-xl border">
+                    <Image
+                      src="/carai.jpg"
+                      alt="TeachMyAi platform overview"
+                      width={1280}
+                      height={720}
+                      sizes="(min-width: 1024px) 1024px, 100vw"
+                      className="h-auto w-full object-cover"
+                      priority
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
-      </main>
-      {/* <LogoCloud /> */}
+      </main></div>
+     
     </>
   );
 }

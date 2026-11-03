@@ -122,7 +122,8 @@ export function ManageTabContent({
     useState<PromptConfigDraft>(() =>
       toPromptConfigDraft(service.promptConfig),
     );
-  const [isSavingService, setIsSavingService] = useState(false);
+  const [isSavingGeneral, setIsSavingGeneral] = useState(false);
+  const [isSavingPrompt, setIsSavingPrompt] = useState(false);
   const [isDeletingService, setIsDeletingService] = useState(false);
   const [geminiApiKeyDraft, setGeminiApiKeyDraft] = useState("");
   const [isSavingGeminiApiKey, setIsSavingGeminiApiKey] = useState(false);
@@ -149,7 +150,7 @@ export function ManageTabContent({
     ? defaultSystemPromptText
     : serviceSystemPromptDraft;
 
-  const saveService = async () => {
+  const saveGeneralDetails = async () => {
     onError("");
 
     const patch: Record<string, unknown> = {};
@@ -162,6 +163,47 @@ export function ManageTabContent({
     if (serviceDescriptionDraft !== service.description) {
       patch.description = serviceDescriptionDraft;
     }
+
+    if (Object.keys(patch).length === 0) {
+      onSuccess("No changes to general details");
+      return;
+    }
+
+    setIsSavingGeneral(true);
+    try {
+      const res = await fetch(`/api/service/${service.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+
+      const data = (await res.json()) as { service?: Service; error?: string };
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update general details");
+      }
+
+      setService((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          slug: data.service?.slug ?? prev.slug,
+          description: data.service?.description ?? prev.description,
+        };
+      });
+      onSuccess("General details updated");
+    } catch (e: unknown) {
+      onError(
+        e instanceof Error ? e.message : "Failed to update general details",
+      );
+    } finally {
+      setIsSavingGeneral(false);
+    }
+  };
+
+  const saveSystemPrompt = async () => {
+    onError("");
+
+    const patch: Record<string, unknown> = {};
 
     if (
       systemPromptEditorMode === "text" &&
@@ -188,11 +230,12 @@ export function ManageTabContent({
     }
 
     if (Object.keys(patch).length === 0) {
-      onSuccess("No changes to save");
+      onSuccess("No changes to system prompt");
+      setIsEditingSystemPrompt(false);
       return;
     }
 
-    setIsSavingService(true);
+    setIsSavingPrompt(true);
     try {
       const res = await fetch(`/api/service/${service.id}`, {
         method: "PATCH",
@@ -202,32 +245,25 @@ export function ManageTabContent({
 
       const data = (await res.json()) as { service?: Service; error?: string };
       if (!res.ok) {
-        throw new Error(data.error || "Failed to save service");
+        throw new Error(data.error || "Failed to save system prompt");
       }
 
       setService((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
-          slug: data.service?.slug ?? prev.slug,
-          description: data.service?.description ?? prev.description,
           systemPrompt: data.service?.systemPrompt ?? prev.systemPrompt,
-          allowedOrigins:
-            data.service?.allowedOrigins ?? prev.allowedOrigins ?? [],
-          hasGeminiApiKey:
-            data.service?.hasGeminiApiKey ?? prev.hasGeminiApiKey,
-          geminiApiKeyLast4:
-            data.service?.geminiApiKeyLast4 ?? prev.geminiApiKeyLast4,
-          geminiApiKeyUpdatedAt:
-            data.service?.geminiApiKeyUpdatedAt ?? prev.geminiApiKeyUpdatedAt,
           promptConfig: data.service?.promptConfig ?? prev.promptConfig,
         };
       });
-      onSuccess("Service updated");
+      onSuccess("System prompt updated");
+      setIsEditingSystemPrompt(false);
     } catch (e: unknown) {
-      onError(e instanceof Error ? e.message : "Failed to save service");
+      onError(
+        e instanceof Error ? e.message : "Failed to save system prompt",
+      );
     } finally {
-      setIsSavingService(false);
+      setIsSavingPrompt(false);
     }
   };
 
@@ -337,55 +373,78 @@ export function ManageTabContent({
   };
 
   return (
-    <TabsContent value="manage" className="mt-4">
+    <TabsContent value="manage" className="mt-4 space-y-6">
+      {/* Unified Manage Card */}
       <Card>
-        <CardHeader>
-          <CardTitle>Edit and manage</CardTitle>
-          <CardDescription>
-            Update slug, description, and service settings.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="service-name">Name</Label>
-            <Input
-              id="service-name"
-              value={service.name}
-              readOnly
-              disabled
-              className="bg-background"
-            />
+        <CardContent className="grid gap-6">
+          {/* SECTION 1: General Details */}
+          <div className="space-y-2">
+            <div>
+              <p className=" font-semibold">General Details</p>
+
+            </div>
+
+            <div className="rounded-md border bg-background p-4 grid gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="service-name">Name</Label>
+                  <Input
+                    id="service-name"
+                    value={service.name}
+                    readOnly
+                    disabled
+                    className="bg-background"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="service-slug">Slug</Label>
+                  <Input
+                    id="service-slug"
+                    value={serviceSlugDraft}
+                    onChange={(e) => setServiceSlugDraft(e.target.value)}
+                    disabled={isSavingGeneral || isDeletingService}
+                    className="bg-background"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="service-description">Description</Label>
+                <Textarea
+                  id="service-description"
+                  value={serviceDescriptionDraft}
+                  onChange={(e) => setServiceDescriptionDraft(e.target.value)}
+                  disabled={isSavingGeneral || isDeletingService}
+                  className="min-h-24 bg-background"
+                />
+              </div>
+
+              <div className="flex justify-start pt-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  className="text-white"
+                  onClick={() => void saveGeneralDetails()}
+                  disabled={isSavingGeneral || isDeletingService}
+                >
+                  {isSavingGeneral ? "Saving..." : "Save details"}
+                </Button>
+              </div>
+            </div>
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="service-slug">Slug</Label>
-            <Input
-              id="service-slug"
-              value={serviceSlugDraft}
-              onChange={(e) => setServiceSlugDraft(e.target.value)}
-              disabled={isSavingService || isDeletingService}
-              className="bg-background"
-            />
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="service-description">Description</Label>
-            <Textarea
-              id="service-description"
-              value={serviceDescriptionDraft}
-              onChange={(e) => setServiceDescriptionDraft(e.target.value)}
-              disabled={isSavingService || isDeletingService}
-              className="min-h-24 bg-background"
-            />
-          </div>
-
-          <div className="grid gap-2">
+          {/* SECTION 2: System Prompt */}
+          <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
-              <Label>System prompt</Label>
+              <div>
+                <p className="font-semibold">System Prompt</p>
+              </div>
               {isEditingSystemPrompt ? (
                 <Button
                   type="button"
                   variant="outline"
+                  size="sm"
                   onClick={() => {
                     setServiceSystemPromptDraft(service.systemPrompt ?? "");
                     setPromptBuilderDraft(
@@ -396,7 +455,7 @@ export function ManageTabContent({
                     );
                     setIsEditingSystemPrompt(false);
                   }}
-                  disabled={isSavingService || isDeletingService}
+                  disabled={isSavingPrompt || isDeletingService}
                 >
                   Close editor
                 </Button>
@@ -404,259 +463,271 @@ export function ManageTabContent({
                 <Button
                   type="button"
                   variant="outline"
+                  size="sm"
                   onClick={() => setIsEditingSystemPrompt(true)}
-                  disabled={isSavingService || isDeletingService}
+                  disabled={isSavingPrompt || isDeletingService}
                 >
-                  Edit
+                  Edit prompt
                 </Button>
               )}
             </div>
-            {isEditingSystemPrompt ? null : (
-              <div className="rounded-md border bg-background p-4">
-                {isUsingDefaultSystemPrompt ? (
-                  <p className="mb-2 text-xs font-medium text-muted-foreground">
-                    Using default prompt
-                  </p>
-                ) : null}
-                <p className="whitespace-pre-wrap text-sm text-muted-foreground">
-                  {displayedSystemPrompt}
-                </p>
-              </div>
-            )}
-          </div>
 
-          {isEditingSystemPrompt ? (
-            <div className="grid gap-4 rounded-md bg-muted/20 px-2">
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant={
-                    systemPromptEditorMode === "text" ? "default" : "outline"
-                  }
-                  className={
-                    systemPromptEditorMode === "text" ? "text-white" : undefined
-                  }
-                  onClick={() => setSystemPromptEditorMode("text")}
-                >
-                  Text area
-                </Button>
-                <Button
-                  type="button"
-                  variant={
-                    systemPromptEditorMode === "builder" ? "default" : "outline"
-                  }
-                  className={
-                    systemPromptEditorMode === "builder"
-                      ? "text-white"
-                      : undefined
-                  }
-                  onClick={() => setSystemPromptEditorMode("builder")}
-                >
-                  Prompt builder
-                </Button>
-              </div>
-
-              {systemPromptEditorMode === "text" ? (
-                <div className="grid gap-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="service-system-prompt">
-                      System prompt text
-                    </Label>
-                    <Link
-                      href="/prompts"
-                      className="text-sm text-primary hover:text-primary/80 underline"
+            <div className="rounded-md border bg-background p-4">
+              {isEditingSystemPrompt ? (
+                <div className="grid gap-4">
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={
+                        systemPromptEditorMode === "text" ? "default" : "outline"
+                      }
+                      className={
+                        systemPromptEditorMode === "text" ? "text-white" : undefined
+                      }
+                      onClick={() => setSystemPromptEditorMode("text")}
                     >
-                      Select from previous prompts
-                    </Link>
+                      Text area
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={
+                        systemPromptEditorMode === "builder" ? "default" : "outline"
+                      }
+                      className={
+                        systemPromptEditorMode === "builder"
+                          ? "text-white"
+                          : undefined
+                      }
+                      onClick={() => setSystemPromptEditorMode("builder")}
+                    >
+                      Prompt builder
+                    </Button>
                   </div>
-                  {isUsingDefaultSystemPrompt ? (
-                    <p className="text-xs text-muted-foreground">
-                      You are editing the default prompt. Save to make it your
-                      custom prompt.
-                    </p>
-                  ) : null}
-                  <Textarea
-                    id="service-system-prompt"
-                    autoFocus
-                    value={
-                      isUsingDefaultSystemPrompt
-                        ? defaultSystemPromptText
-                        : serviceSystemPromptDraft
-                    }
-                    onChange={(e) =>
-                      setServiceSystemPromptDraft(e.target.value)
-                    }
-                    disabled={isSavingService || isDeletingService}
-                    className="min-h-32 bg-background"
-                    placeholder="Leave empty to use default prompt"
-                  />
+
+                  {systemPromptEditorMode === "text" ? (
+                    <div className="grid gap-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="service-system-prompt">
+                          System prompt text
+                        </Label>
+                        <Link
+                          href="/prompts"
+                          className="text-sm text-primary hover:text-primary/80 underline"
+                        >
+                          Select from previous prompts
+                        </Link>
+                      </div>
+                      {isUsingDefaultSystemPrompt ? (
+                        <p className="text-xs text-muted-foreground">
+                          You are editing the default prompt. Save to make it your
+                          custom prompt.
+                        </p>
+                      ) : null}
+                      <Textarea
+                        id="service-system-prompt"
+                        autoFocus
+                        value={
+                          isUsingDefaultSystemPrompt
+                            ? defaultSystemPromptText
+                            : serviceSystemPromptDraft
+                        }
+                        onChange={(e) =>
+                          setServiceSystemPromptDraft(e.target.value)
+                        }
+                        disabled={isSavingPrompt || isDeletingService}
+                        className="min-h-32 bg-background"
+                        placeholder="Leave empty to use default prompt"
+                      />
+                    </div>
+                  ) : (
+                    <div className="grid gap-3 border p-4 rounded-2xl bg-background">
+                      <div className="grid gap-2 ">
+                        <Label htmlFor="pb-role">Role</Label>
+                        <Input
+                          id="pb-role"
+                          value={promptBuilderDraft.role}
+                          onChange={(e) =>
+                            setPromptBuilderDraft((prev) => ({
+                              ...prev,
+                              role: e.target.value,
+                            }))
+                          }
+                          disabled={isSavingPrompt || isDeletingService}
+                          className="bg-background"
+                          placeholder="A helpful AI assistant..."
+                        />
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label htmlFor="pb-instruction">Instruction</Label>
+                        <Textarea
+                          id="pb-instruction"
+                          value={promptBuilderDraft.instruction}
+                          onChange={(e) =>
+                            setPromptBuilderDraft((prev) => ({
+                              ...prev,
+                              instruction: e.target.value,
+                            }))
+                          }
+                          disabled={isSavingPrompt || isDeletingService}
+                          className="min-h-24 bg-background"
+                          placeholder="Main instruction for the model"
+                        />
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label htmlFor="pb-context">Context</Label>
+                        <Textarea
+                          id="pb-context"
+                          value={promptBuilderDraft.context}
+                          onChange={(e) =>
+                            setPromptBuilderDraft((prev) => ({
+                              ...prev,
+                              context: e.target.value,
+                            }))
+                          }
+                          disabled={isSavingPrompt || isDeletingService}
+                          className="min-h-20 bg-background"
+                        />
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label htmlFor="pb-output-constraints">
+                          Output constraints (one per line)
+                        </Label>
+                        <Textarea
+                          id="pb-output-constraints"
+                          value={promptBuilderDraft.outputConstraints}
+                          onChange={(e) =>
+                            setPromptBuilderDraft((prev) => ({
+                              ...prev,
+                              outputConstraints: e.target.value,
+                            }))
+                          }
+                          disabled={isSavingPrompt || isDeletingService}
+                          className="min-h-20 bg-background"
+                        />
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label htmlFor="pb-style">Style / tone</Label>
+                        <Textarea
+                          id="pb-style"
+                          value={promptBuilderDraft.styleOrTone}
+                          onChange={(e) =>
+                            setPromptBuilderDraft((prev) => ({
+                              ...prev,
+                              styleOrTone: e.target.value,
+                            }))
+                          }
+                          disabled={isSavingPrompt || isDeletingService}
+                          className="min-h-20 bg-background"
+                        />
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label htmlFor="pb-output-format">
+                          Output format (one per line)
+                        </Label>
+                        <Textarea
+                          id="pb-output-format"
+                          value={promptBuilderDraft.outputFormat}
+                          onChange={(e) =>
+                            setPromptBuilderDraft((prev) => ({
+                              ...prev,
+                              outputFormat: e.target.value,
+                            }))
+                          }
+                          disabled={isSavingPrompt || isDeletingService}
+                          className="min-h-20 bg-background"
+                        />
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label htmlFor="pb-examples">Examples (one per line)</Label>
+                        <Textarea
+                          id="pb-examples"
+                          value={promptBuilderDraft.examples}
+                          onChange={(e) =>
+                            setPromptBuilderDraft((prev) => ({
+                              ...prev,
+                              examples: e.target.value,
+                            }))
+                          }
+                          disabled={isSavingPrompt || isDeletingService}
+                          className="min-h-20 bg-background"
+                        />
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label htmlFor="pb-goal">Goal</Label>
+                        <Textarea
+                          id="pb-goal"
+                          value={promptBuilderDraft.goal}
+                          onChange={(e) =>
+                            setPromptBuilderDraft((prev) => ({
+                              ...prev,
+                              goal: e.target.value,
+                            }))
+                          }
+                          disabled={isSavingPrompt || isDeletingService}
+                          className="min-h-20 bg-background"
+                        />
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label htmlFor="pb-reasoning">Reasoning strategy</Label>
+                        <Input
+                          id="pb-reasoning"
+                          value={promptBuilderDraft.reasoningStrategy}
+                          onChange={(e) =>
+                            setPromptBuilderDraft((prev) => ({
+                              ...prev,
+                              reasoningStrategy: e.target.value,
+                            }))
+                          }
+                          disabled={isSavingPrompt || isDeletingService}
+                          className="bg-background"
+                          placeholder="RAG"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex justify-start pt-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="text-white"
+                      onClick={() => void saveSystemPrompt()}
+                      disabled={isSavingPrompt || isDeletingService}
+                    >
+                      {isSavingPrompt ? "Saving..." : "Save prompt"}
+                    </Button>
+                  </div>
                 </div>
               ) : (
-                <div className="grid gap-3 border p-4 rounded-2xl">
-                  <div className="grid gap-2 ">
-                    <Label htmlFor="pb-role">Role</Label>
-                    <Input
-                      id="pb-role"
-                      value={promptBuilderDraft.role}
-                      onChange={(e) =>
-                        setPromptBuilderDraft((prev) => ({
-                          ...prev,
-                          role: e.target.value,
-                        }))
-                      }
-                      disabled={isSavingService || isDeletingService}
-                      className="bg-background"
-                      placeholder="A helpful AI assistant..."
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="pb-instruction">Instruction</Label>
-                    <Textarea
-                      id="pb-instruction"
-                      value={promptBuilderDraft.instruction}
-                      onChange={(e) =>
-                        setPromptBuilderDraft((prev) => ({
-                          ...prev,
-                          instruction: e.target.value,
-                        }))
-                      }
-                      disabled={isSavingService || isDeletingService}
-                      className="min-h-24 bg-background"
-                      placeholder="Main instruction for the model"
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="pb-context">Context</Label>
-                    <Textarea
-                      id="pb-context"
-                      value={promptBuilderDraft.context}
-                      onChange={(e) =>
-                        setPromptBuilderDraft((prev) => ({
-                          ...prev,
-                          context: e.target.value,
-                        }))
-                      }
-                      disabled={isSavingService || isDeletingService}
-                      className="min-h-20 bg-background"
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="pb-output-constraints">
-                      Output constraints (one per line)
-                    </Label>
-                    <Textarea
-                      id="pb-output-constraints"
-                      value={promptBuilderDraft.outputConstraints}
-                      onChange={(e) =>
-                        setPromptBuilderDraft((prev) => ({
-                          ...prev,
-                          outputConstraints: e.target.value,
-                        }))
-                      }
-                      disabled={isSavingService || isDeletingService}
-                      className="min-h-20 bg-background"
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="pb-style">Style / tone</Label>
-                    <Textarea
-                      id="pb-style"
-                      value={promptBuilderDraft.styleOrTone}
-                      onChange={(e) =>
-                        setPromptBuilderDraft((prev) => ({
-                          ...prev,
-                          styleOrTone: e.target.value,
-                        }))
-                      }
-                      disabled={isSavingService || isDeletingService}
-                      className="min-h-20 bg-background"
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="pb-output-format">
-                      Output format (one per line)
-                    </Label>
-                    <Textarea
-                      id="pb-output-format"
-                      value={promptBuilderDraft.outputFormat}
-                      onChange={(e) =>
-                        setPromptBuilderDraft((prev) => ({
-                          ...prev,
-                          outputFormat: e.target.value,
-                        }))
-                      }
-                      disabled={isSavingService || isDeletingService}
-                      className="min-h-20 bg-background"
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="pb-examples">Examples (one per line)</Label>
-                    <Textarea
-                      id="pb-examples"
-                      value={promptBuilderDraft.examples}
-                      onChange={(e) =>
-                        setPromptBuilderDraft((prev) => ({
-                          ...prev,
-                          examples: e.target.value,
-                        }))
-                      }
-                      disabled={isSavingService || isDeletingService}
-                      className="min-h-20 bg-background"
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="pb-goal">Goal</Label>
-                    <Textarea
-                      id="pb-goal"
-                      value={promptBuilderDraft.goal}
-                      onChange={(e) =>
-                        setPromptBuilderDraft((prev) => ({
-                          ...prev,
-                          goal: e.target.value,
-                        }))
-                      }
-                      disabled={isSavingService || isDeletingService}
-                      className="min-h-20 bg-background"
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="pb-reasoning">Reasoning strategy</Label>
-                    <Input
-                      id="pb-reasoning"
-                      value={promptBuilderDraft.reasoningStrategy}
-                      onChange={(e) =>
-                        setPromptBuilderDraft((prev) => ({
-                          ...prev,
-                          reasoningStrategy: e.target.value,
-                        }))
-                      }
-                      disabled={isSavingService || isDeletingService}
-                      className="bg-background"
-                      placeholder="RAG"
-                    />
-                  </div>
+                <div>
+                  {isUsingDefaultSystemPrompt ? (
+                    <p className="mb-2 text-xs font-medium text-muted-foreground">
+                      Using default prompt
+                    </p>
+                  ) : null}
+                  <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+                    {displayedSystemPrompt}
+                  </p>
                 </div>
               )}
             </div>
-          ) : null}
+          </div>
 
-          <div className="rounded-md bg-muted/20 ">
-            <div className="mb-3 flex items-center justify-between gap-2">
+          {/* SECTION 3: External Model Keys */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
               <div>
                 <p className="font-semibold">External Model Keys</p>
-                <p className="text-xs text-muted-foreground">
-                  Configure how your service connects to AI models. These keys
-                  belong to the service owner and are used to fulfill
-                  completions.
-                </p>
               </div>
               <span
                 className={`text-xs font-medium ${service?.hasGeminiApiKey ? "text-green-600" : "text-muted-foreground"}`}
@@ -665,22 +736,20 @@ export function ManageTabContent({
               </span>
             </div>
 
-            <div className="rounded-md border bg-background p-3">
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <p className="text-sm font-medium">Google Gemini</p>
-                  <p className="text-xs text-muted-foreground">
-                    {service?.hasGeminiApiKey
-                      ? `Key ending in ${service.geminiApiKeyLast4 ?? "****"}`
-                      : "No custom key saved. Using platform default."}
+            <div className="rounded-md border bg-background p-4">
+              <div>
+                <p className="text-sm font-medium">Google Gemini</p>
+                <p className="text-xs text-muted-foreground">
+                  {service?.hasGeminiApiKey
+                    ? `Key ending in ${service.geminiApiKeyLast4 ?? "****"}`
+                    : "No custom key saved. Using platform default."}
+                </p>
+                {service?.geminiApiKeyUpdatedAt ? (
+                  <p className="mt-1 text-[10px] text-muted-foreground">
+                    Updated:{" "}
+                    {new Date(service.geminiApiKeyUpdatedAt).toLocaleString()}
                   </p>
-                  {service?.geminiApiKeyUpdatedAt ? (
-                    <p className="mt-1 text-[10px] text-muted-foreground">
-                      Updated:{" "}
-                      {new Date(service.geminiApiKeyUpdatedAt).toLocaleString()}
-                    </p>
-                  ) : null}
-                </div>
+                ) : null}
               </div>
 
               <div className="mt-4 border-t pt-3">
@@ -726,46 +795,52 @@ export function ManageTabContent({
               </div>
             </div>
           </div>
+        </CardContent>
+      </Card>
 
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              className="text-white"
-              onClick={() => void saveService()}
-              disabled={isSavingService || isDeletingService}
-            >
-              {isSavingService ? "Saving..." : "Save changes"}
-            </Button>
-
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  disabled={isSavingService || isDeletingService}
-                >
-                  {isDeletingService ? "Deleting..." : "Delete service"}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete service?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will delete the service, keys, and knowledge.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    variant="destructive"
-                    onClick={() => void deleteService()}
-                  >
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+      {/* DANGER ZONE: Delete Service */}
+      <Card className="border-destructive/30">
+        <CardHeader>
+          <CardTitle className="text-destructive">Danger Zone</CardTitle>
+          <CardDescription>
+            Permanently delete this service and all associated data.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium">Delete service</p>
+            <p className="text-xs text-muted-foreground">
+              This will permanently delete the service, keys, and knowledge.
+            </p>
           </div>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={isDeletingService}
+              >
+                {isDeletingService ? "Deleting..." : "Delete service"}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete service?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will delete the service, keys, and knowledge.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  variant="destructive"
+                  onClick={() => void deleteService()}
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </CardContent>
       </Card>
     </TabsContent>

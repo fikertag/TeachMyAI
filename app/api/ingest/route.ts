@@ -89,10 +89,12 @@ export async function POST(req: Request) {
       );
     }
 
+    const preview = body.text.trim().slice(0, 240);
+
     const document = await KnowledgeDocument.create({
       serviceId: serviceObjectId,
       title: body.title ?? "Untitled",
-      text: body.text,
+      preview,
       source: "api",
     });
 

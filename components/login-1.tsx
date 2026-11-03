@@ -66,25 +66,31 @@ export default function Login() {
   };
 
   return (
-    <section className="bg-background grid min-h-screen grid-rows-[auto_1fr] px-4">
-      <div className="mx-auto w-full max-w-7xl py-1 border-b">
+    <section className="bg-background relative min-h-screen flex flex-col items-center justify-start px-4 pt-12 pb-12">
+      <div className="absolute top-5 left-5 sm:top-6 sm:left-8 z-10">
         <Link
           href="/"
           aria-label="go home"
-          className="inline-block border-transparent py-3"
+          className="font-semibold text-lg tracking-tight hover:opacity-80 transition-opacity"
         >
           Teach My Ai
         </Link>
       </div>
 
-      <div className="m-auto w-full max-w-sm">
+      <div className="w-full max-w-sm">
         <div className="text-center">
           <h1 className="font-serif text-4xl font-medium">Welcome back</h1>
-          <p className="text-muted-foreground mt-2 text-sm">
-            Sign in to your account to continue
-          </p>
+             <p className="text-muted-foreground mt-1 text-center ">
+          Don&apos;t have an account?{" "}
+          <Link
+            href="/signup"
+            className="text-primary font-medium hover:underline"
+          >
+            Sign up
+          </Link>
+        </p>
         </div>
-        <Card className="mt-6 p-8">
+        <Card className="mt-4 p-8">
           <form onSubmit={handleLogin} className="space-y-5">
             <div className="space-y-3">
               <Label htmlFor="email" className="text-sm">
@@ -125,7 +131,7 @@ export default function Login() {
             </Button>
           </form>
 
-          <div className="my-6 flex items-center gap-3">
+          <div className="flex items-center gap-3">
             <hr className="flex-1" />
             <span className="text-muted-foreground text-xs">
               or continue with
@@ -182,15 +188,7 @@ export default function Login() {
           </div>
         </Card>
 
-        <p className="text-muted-foreground mt-6 text-center text-sm">
-          Don&apos;t have an account?{" "}
-          <Link
-            href="/signup"
-            className="text-primary font-medium hover:underline"
-          >
-            Sign up
-          </Link>
-        </p>
+   
       </div>
     </section>
   );
