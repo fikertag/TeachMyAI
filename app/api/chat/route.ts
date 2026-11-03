@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import mongoose from "mongoose";
@@ -366,7 +366,7 @@ export async function POST(req: NextRequest) {
           {
             $vectorSearch: {
               queryVector: vector,
-              index: "rga_index",
+              index: "vector_index",
               filter: { serviceId: serviceObjectId },
               path: "embedding",
               numCandidates: 50,
