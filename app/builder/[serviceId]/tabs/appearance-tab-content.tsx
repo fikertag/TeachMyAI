@@ -320,7 +320,7 @@ export function AppearanceTabContent({
                         disabled={isSavingQuickPrompts}
                         placeholder="Button title"
                         maxLength={100}
-                        className="bg-background text-sm h-8"
+                        className="bg-background  h-8"
                       />
                       <Input
                         id={`prompt-text-${index}`}
@@ -334,7 +334,7 @@ export function AppearanceTabContent({
                         disabled={isSavingQuickPrompts}
                         placeholder="Message sent to AI"
                         maxLength={1000}
-                        className="bg-background text-sm h-8"
+                        className="bg-background  h-8"
                       />
                     </div>
                     <button
@@ -358,7 +358,7 @@ export function AppearanceTabContent({
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
+                  size="default"
                   disabled={isSavingQuickPrompts || serviceQuickPromptsDraft.length >= 10}
                   onClick={() => {
                     setServiceQuickPromptsDraft([
@@ -374,7 +374,7 @@ export function AppearanceTabContent({
 
                 <Button
                   type="button"
-                  size="sm"
+                  size="default"
                   onClick={() => void saveQuickPrompts()}
                   disabled={isSavingQuickPrompts}
                   className="text-white"

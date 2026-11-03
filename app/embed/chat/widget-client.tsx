@@ -217,7 +217,7 @@ export default function EmbedChatClient({ serviceId }: { serviceId: string }) {
             borderRadius: 10,
             border: "1px solid rgba(0,0,0,0.15)",
             outline: "none",
-            fontSize: 13,
+            fontSize: 16,
           }}
         />
         <button

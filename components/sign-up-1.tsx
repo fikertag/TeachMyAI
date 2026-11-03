@@ -67,7 +67,7 @@ export default function SignUp() {
   };
 
   return (
-    <section className="bg-background relative min-h-screen flex flex-col items-center justify-start px-4 pt-12">
+    <section className="bg-background relative min-h-screen flex flex-col items-center justify-center px-4 pt-12 pb-20 my-auto ">
       <div className="absolute top-5 left-5 sm:top-6 sm:left-8 z-10">
         <Link
           href="/"

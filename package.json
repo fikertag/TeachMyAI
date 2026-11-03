@@ -20,6 +20,7 @@
     "class-variance-authority": "^0.7.1",
     "langchain": "^1.2.24",
     "lucide-react": "^0.552.0",
+    "mammoth": "^1.13.0",
     "mongodb": "^6.21.0",
     "mongoose": "^8.19.3",
     "motion": "^12.34.0",
@@ -28,8 +29,11 @@
     "radix-ui": "^1.4.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "resend": "^6.9.2",
     "sileo": "^0.1.4",
+    "unpdf": "^1.7.0",
     "zod": "^4.1.12"
   },
   "devDependencies": {

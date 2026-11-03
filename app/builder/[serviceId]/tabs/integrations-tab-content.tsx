@@ -640,7 +640,7 @@ export function IntegrationsTabContent({
               <p className="font-semibold">Embed Chat Widget</p>
             </div>
 
-            <div className="rounded-md border bg-background p-4 grid gap-4 lg:grid-cols-2">
+            <div className="rounded-md  bg-background grid gap-4 lg:grid-cols-2">
               {/* Embed URL */}
               <div className="rounded-lg border bg-muted/20 p-3.5 space-y-2.5">
                 <div className="flex items-center justify-between">

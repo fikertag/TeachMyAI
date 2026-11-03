@@ -66,7 +66,7 @@ export default function Login() {
   };
 
   return (
-    <section className="bg-background relative min-h-screen flex flex-col items-center justify-start px-4 pt-12 pb-12">
+    <section className="bg-background relative min-h-screen flex flex-col items-center justify-center px-4 pt-12 pb-30 my-auto">
       <div className="absolute top-5 left-5 sm:top-6 sm:left-8 z-10">
         <Link
           href="/"

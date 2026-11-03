@@ -1,9 +1,12 @@
+"use client";
+
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { AudioLines, Mic2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HeroHeader } from "./header";
+import { authClient } from "@/lib/auth-client";
 
 // Staggered reveal for the demo chat. Inline styles keep the delay and
 // fill-mode working regardless of which animation utilities are installed;
@@ -14,6 +17,7 @@ const reveal = (delayMs: number): CSSProperties => ({
 });
 
 export default function HeroSection() {
+  const { data: session } = authClient.useSession();
   return (
     <>
     <div className="min-h-screen w-full relative bg-white">
@@ -48,18 +52,19 @@ export default function HeroSection() {
 
                   <p className="text-muted-foreground mt-6 max-w-md text-pretty text-base leading-relaxed sm:text-lg">
                     Add your documents, FAQs and policies. Your assistant
-                    answers questions about your business from them, wherever
-                    you put it.
+                    answers questions about your business.
                   </p>
-{/* 
-                  <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+
+                  <div className="mt-8 flex flex-col  gap-3 sm:flex-row">
                     <Button asChild size="lg">
-                      <Link href="/builder">Create your assistant</Link>
+                      <Link href="/builder">
+                        {session ? "Go to dashboard" : "Create your assistant"}
+                      </Link>
                     </Button>
                     <Button asChild size="lg" variant="outline">
                       <Link href="/#how-it-works">See how it works</Link>
                     </Button>
-                  </div> */}
+                  </div>
                 </div>
 
                 {/* Demo chat (decorative) */}

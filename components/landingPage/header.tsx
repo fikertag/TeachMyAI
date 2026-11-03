@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { LayoutDashboard, LogOut, Menu, X } from "lucide-react";
+import { LogOut, Menu, X } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -103,70 +103,70 @@ export const HeroHeader = () => {
           </ul>
 
           {/* Right side */}
-          <div className="flex items-center justify-self-end">
-            {/* Desktop auth */}
-            <div className="hidden items-center gap-2 lg:flex">
-              {isPending ? (
-                <div
-                  aria-hidden
-                  className="h-8 w-32 animate-pulse rounded-md bg-muted"
-                />
-              ) : session ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="cursor-pointer rounded-full"
-                      aria-label="Account menu"
-                    >
-                      <Avatar className="size-8">
-                        <AvatarImage
-                          src={session.user.image ?? undefined}
-                          alt={session.user.name ?? "Account"}
-                        />
-                        <AvatarFallback className="text-xs">
-                          {getInitials(session.user.name, session.user.email)}
-                        </AvatarFallback>
-                      </Avatar>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel className="font-normal">
-                      <p className="truncate text-sm font-medium">
-                        {session.user.name}
-                      </p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {session.user.email}
-                      </p>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild className="cursor-pointer">
-                      <Link href="/builder">
-                        <LayoutDashboard />
-                        Dashboard
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="cursor-pointer"
-                      onClick={() => authClient.signOut()}
-                    >
-                      <LogOut />
-                      Sign out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <>
-                  <Button asChild variant="ghost" size="sm">
-                    <Link href="/signin">Login</Link>
-                  </Button>
-                  <Button asChild size="sm">
-                    <Link href="/builder">Get Started</Link>
-                  </Button>
-                </>
-              )}
-            </div>
+          <div className="flex items-center gap-2 justify-self-end">
+            {isPending ? (
+              <div
+                aria-hidden
+                className="h-8 w-24 animate-pulse rounded-md bg-muted"
+              />
+            ) : session ? (
+              <>
+                <Button asChild size="sm">
+                  <Link href="/builder">Dashboard</Link>
+                </Button>
+
+                {/* Desktop dropdown */}
+                <div className="hidden lg:block">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="cursor-pointer rounded-full"
+                        aria-label="Account menu"
+                      >
+                        <Avatar className="size-8">
+                          <AvatarImage
+                            src={session.user.image ?? undefined}
+                            alt={session.user.name ?? "Account"}
+                          />
+                          <AvatarFallback className="text-xs">
+                            {getInitials(session.user.name, session.user.email)}
+                          </AvatarFallback>
+                        </Avatar>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuLabel className="font-normal">
+                        <p className="truncate text-sm font-medium">
+                          {session.user.name}
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {session.user.email}
+                        </p>
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => authClient.signOut()}
+                      >
+                        <LogOut />
+                        Sign out
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </>
+            ) : (
+              <div className="hidden items-center gap-2 lg:flex">
+                <Button asChild variant="ghost" size="sm">
+                  <Link href="/signin">Login</Link>
+                </Button>
+                <Button asChild size="sm">
+                  <Link href="/builder">Get Started</Link>
+                </Button>
+              </div>
+            )}
 
             {/* Mobile toggle */}
             <Button
@@ -207,19 +207,21 @@ export const HeroHeader = () => {
               <div className="mt-2 flex flex-col gap-2">
                 {session ? (
                   <>
-                    <Button asChild variant="outline" className="w-full">
-                      <Link href="/builder" onClick={() => setMenuOpen(false)}>
-                        Dashboard
-                      </Link>
-                    </Button>
+                    <div className="px-2 py-1.5 text-sm">
+                      <p className="truncate font-medium">{session.user.name}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {session.user.email}
+                      </p>
+                    </div>
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       className="w-full"
                       onClick={() => {
                         setMenuOpen(false);
                         authClient.signOut();
                       }}
                     >
+                      <LogOut />
                       Sign out
                     </Button>
                   </>

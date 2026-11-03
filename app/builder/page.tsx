@@ -91,10 +91,10 @@ export default function BuilderPage() {
     sileo.error({
       title: "Error",
       description: error,
-      fill: "oklch(0.9779 0.0042 56.38)",
+      fill: "oklch(0.985 0.005 250)",
       styles: {
         title: "text-destructive!",
-        description: "text-[oklch(0.4563_0.0061_48.59)]!",
+        description: "text-[oklch(0.48_0.05_258)]!",
       },
     });
   }, [error]);
@@ -104,9 +104,9 @@ export default function BuilderPage() {
     sileo.success({
       title: "Success",
       description: success,
-      fill: "#98785d",
+      fill: "oklch(0.52 0.2 260)",
       styles: {
-        description: "text-[#e3e0d8]!",
+        description: "text-[oklch(0.94_0.03_250)]!",
       },
     });
   }, [success]);

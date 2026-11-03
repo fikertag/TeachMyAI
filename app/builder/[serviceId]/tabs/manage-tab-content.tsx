@@ -542,7 +542,7 @@ export function ManageTabContent({
                       />
                     </div>
                   ) : (
-                    <div className="grid gap-3 border p-4 rounded-2xl bg-background">
+                    <div className="grid gap-3 py-4 rounded-2xl bg-background">
                       <div className="grid gap-2 ">
                         <Label htmlFor="pb-role">Role</Label>
                         <Input

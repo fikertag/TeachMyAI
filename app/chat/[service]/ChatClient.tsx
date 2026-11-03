@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Copy, RotateCcw, SendHorizontal } from "lucide-react";
@@ -17,6 +17,7 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { MarkdownContent } from "@/components/chat/markdown-content";
 
 type Service = {
   id: string;
@@ -295,11 +296,11 @@ export default function ChatClient({ slug }: { slug: string }) {
 
   return (
     <div className="h-svh ">
-      <div className="mx-auto flex h-svh w-full max-w-4xl flex-col px-4 pb-6 pt-4 sm:px-6 ">
-        <Card className="flex h-full min-h-0 flex-1 flex-col border-0 bg-transparent -my-6">
-          <CardContent className="flex min-h-0 flex-1 flex-col gap-4 p-0">
+      <div className="mx-auto flex h-svh w-full max-w-4xl flex-col pb-6 pt-4 ">
+        <Card className="flex h-full min-h-0 flex-1 flex-col border-0 bg-transparent -my-6 pb-0!">
+          <CardContent className="flex min-h-0 flex-1 flex-col gap-4 px-2!">
             <ScrollArea className="min-h-0 flex-1">
-              <div className="flex min-h-full flex-col gap-4 px-6 pb-6 pt-4">
+              <div className="flex min-h-full flex-col gap-4  pb-6 pt-4">
                 {isLoadingService ? (
                   <div className="flex h-full flex-col justify-center my-auto pb-20 gap-6 animate-pulse">
                     <div className="space-y-3 flex flex-col items-center">
@@ -323,8 +324,8 @@ export default function ChatClient({ slug }: { slug: string }) {
                     </div>
                   </div>
                 ) : messages.length === 0 ? (
-                  <div className="flex h-full flex-col justify-center my-auto pb-20 gap-6">
-                    <div className="space-y-2 flex flex-col items-center">
+                  <div className="flex h-full flex-col items-center justify-center my-auto pb-20 gap-6 w-full">
+                    <div className="space-y-2 flex flex-col items-center text-center px-4">
                       <h2
                         className="text-4xl capitalize font-semibold text-foreground "
                         style={{ color: service?.color }}
@@ -339,42 +340,44 @@ export default function ChatClient({ slug }: { slug: string }) {
                     </div>
 
                     {quickPrompts.length > 0 && (
-                      <div className="grid gap-3 sm:grid-cols-3 mt-5">
-                        {quickPrompts.map((prompt) => (
-                          <Card
-                            key={prompt.title}
-                            className="cursor-pointer transition hover:shadow-xl"
-                            style={{
-                              backgroundColor: service?.color + "10",
-                              borderColor: service?.color + "20",
-                            }}
-                            onClick={() => {
-                              setInput(prompt.prompt);
-                              focusChatInput();
-                            }}
-                          >
-                            <CardHeader className="pb-2">
-                              <CardTitle
-                                className="text-sm"
-                                style={{ color: service?.color }}
-                              >
-                                {prompt.title}
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent
-                              className="text-xs text-muted-foreground"
-                              title={prompt.prompt}
+                      <div className="w-full px-4 mt-5">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                          {quickPrompts.map((prompt, idx) => (
+                            <Card
+                              key={prompt.title}
+                              className={`cursor-pointer transition hover:shadow-xl${idx >= 3 ? " hidden sm:block" : ""}`}
                               style={{
-                                display: "-webkit-box",
-                                WebkitBoxOrient: "vertical",
-                                WebkitLineClamp: 1,
-                                overflow: "hidden",
+                                backgroundColor: service?.color + "10",
+                                borderColor: service?.color + "20",
+                              }}
+                              onClick={() => {
+                                setInput(prompt.prompt);
+                                focusChatInput();
                               }}
                             >
-                              {prompt.prompt}
-                            </CardContent>
-                          </Card>
-                        ))}
+                              <CardHeader className="pb-2">
+                                <CardTitle
+                                  className="text-sm"
+                                  style={{ color: service?.color }}
+                                >
+                                  {prompt.title}
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent
+                                className="text-xs text-muted-foreground"
+                                title={prompt.prompt}
+                                style={{
+                                  display: "-webkit-box",
+                                  WebkitBoxOrient: "vertical",
+                                  WebkitLineClamp: 1,
+                                  overflow: "hidden",
+                                }}
+                              >
+                                {prompt.prompt}
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -388,10 +391,10 @@ export default function ChatClient({ slug }: { slug: string }) {
                         }`}
                       >
                         <div
-                          className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm shadow-sm ${
+                          className={`max-w-[80%] rounded-2xl px-4 py-2  shadow-sm ${
                             m.role === "user"
-                              ? "bg-accent text-primary-foreground"
-                              : "bg-accent/20 text-secondary-foreground"
+                              ? "bg-accent text-foreground"
+                              : "bg-accent/20 text- text-secondary-foreground"
                           }`}
                           style={{
                             backgroundColor:
@@ -400,7 +403,11 @@ export default function ChatClient({ slug }: { slug: string }) {
                                 : service?.color + "20",
                           }}
                         >
-                          <p className="whitespace-pre-wrap">{m.content}</p>
+                          {m.role === "assistant" ? (
+                            <MarkdownContent content={m.content} />
+                          ) : (
+                            <p className="whitespace-pre-wrap">{m.content}</p>
+                          )}
                           {m.role === "assistant" ? (
                             <div className="mt-2 flex justify-start">
                               <Button
@@ -444,7 +451,7 @@ export default function ChatClient({ slug }: { slug: string }) {
                     ))}
                     {isSending ? (
                       <div className="flex justify-start">
-                        <div className="max-w-[80%] rounded-2xl bg-accent/20 px-4 py-3 text-sm text-secondary-foreground shadow-sm">
+                        <div className="max-w-[80%] rounded-2xl bg-accent/20 px-4 py-3  text-secondary-foreground shadow-sm">
                           <div className="flex items-center gap-1.5">
                             <span>Thinking</span>
                             <span className="inline-flex gap-1">
@@ -474,7 +481,7 @@ export default function ChatClient({ slug }: { slug: string }) {
                     placeholder="Type your message..."
                     autoFocus
                     disabled={isLoadingService || !service}
-                    className="h-full px-4 text-sm"
+                    className="h-full px-4 "
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
@@ -499,7 +506,7 @@ export default function ChatClient({ slug }: { slug: string }) {
                       size="sm"
                     >
                       <SendHorizontal
-                        color={service?.color || "#98785d"}
+                        color={service?.color || "oklch(0.52 0.2 260)"}
                         className="h-10"
                       />
                     </InputGroupButton>

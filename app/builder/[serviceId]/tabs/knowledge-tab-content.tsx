@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { TabsContent } from "@/components/ui/tabs";
-import { X } from "lucide-react";
+import { FileText, FileUp, Loader2, X } from "lucide-react";
 
 import type { KnowledgeDocument } from "./types";
 
@@ -43,6 +43,9 @@ export function KnowledgeTabContent({
   const [docTitle, setDocTitle] = useState("");
   const [docText, setDocText] = useState("");
   const [isIngesting, setIsIngesting] = useState(false);
+  const [isExtractingFile, setIsExtractingFile] = useState(false);
+  const [extractedFileName, setExtractedFileName] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [busyDocId, setBusyDocId] = useState("");
   const [busyDocAction, setBusyDocAction] = useState<"revoke" | "delete" | "">(
     "",
@@ -110,6 +113,7 @@ export function KnowledgeTabContent({
 
       setDocTitle("");
       setDocText("");
+      setExtractedFileName("");
       setShowAddKnowledge(false);
       onSuccess(
         `Ingested ${data.chunksInserted ?? 0}/${data.totalChunks ?? 0} chunks`,
@@ -119,6 +123,51 @@ export function KnowledgeTabContent({
       onError(e instanceof Error ? e.message : "Failed to add knowledge");
     } finally {
       setIsIngesting(false);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsExtractingFile(true);
+    onError("");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/extract-text", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = (await res.json()) as {
+        success?: boolean;
+        title?: string;
+        text?: string;
+        error?: string;
+      };
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to extract text from file");
+      }
+
+      if (data.title && !docTitle.trim()) {
+        setDocTitle(data.title);
+      }
+      if (data.text) {
+        setDocText(data.text);
+      }
+      setExtractedFileName(file.name);
+      onSuccess(`Extracted text from ${file.name}`);
+    } catch (err: unknown) {
+      onError(err instanceof Error ? err.message : "Failed to extract text");
+    } finally {
+      setIsExtractingFile(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
@@ -194,6 +243,50 @@ export function KnowledgeTabContent({
 
           {showAddKnowledge ? (
             <form onSubmit={ingestKnowledge} className="grid gap-3">
+              <div className="rounded-lg border-2 border-dashed border-border/80 bg-muted/20 p-4 text-center hover:bg-muted/30 transition">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.docx,.txt,.md"
+                  onChange={handleFileUpload}
+                  disabled={isIngesting || isExtractingFile}
+                  className="hidden"
+                  id="knowledge-file-upload"
+                />
+                <label
+                  htmlFor="knowledge-file-upload"
+                  className="flex flex-col items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  {isExtractingFile ? (
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  ) : (
+                    <FileUp className="h-6 w-6 text-muted-foreground" />
+                  )}
+                  <div className="text-sm font-medium">
+                    {isExtractingFile
+                      ? "Extracting text from file..."
+                      : "Upload Word (.docx), PDF, or text file"}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    In-memory extraction only. Files are not saved to storage.
+                  </p>
+                  {extractedFileName && !isExtractingFile && (
+                    <div className="mt-1 flex items-center gap-1 text-xs text-green-600 dark:text-green-400 font-medium">
+                      <FileText className="h-3.5 w-3.5" />
+                      Loaded from {extractedFileName}
+                    </div>
+                  )}
+                </label>
+              </div>
+
+              <div className="relative flex items-center justify-center my-1">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-border/60" />
+                </div>
+                <span className="relative bg-card px-2 text-xs uppercase text-muted-foreground">
+                  Or edit manually
+                </span>
+              </div>
               <div className="grid gap-2">
                 <Label htmlFor="doc-title">Title (optional)</Label>
                 <Input

@@ -99,10 +99,10 @@ export default function ServiceDetailsViewRefactored({
     sileo.error({
       title: "Error",
       description: error,
-      fill: "oklch(0.9779 0.0042 56.38)",
+      fill: "oklch(0.985 0.005 250)",
       styles: {
         title: "text-destructive!",
-        description: "text-[oklch(0.4563_0.0061_48.59)]!",
+        description: "text-[oklch(0.48_0.05_258)]!",
       },
     });
   }, [error]);
@@ -112,9 +112,9 @@ export default function ServiceDetailsViewRefactored({
     sileo.success({
       title: "Success",
       description: success,
-      fill: "#98785d",
+      fill: "oklch(0.52 0.2 260)",
       styles: {
-        description: "text-[#e3e0d8]!",
+        description: "text-[oklch(0.94_0.03_250)]!",
       },
     });
   }, [success]);
@@ -250,27 +250,40 @@ export default function ServiceDetailsViewRefactored({
               </CardContent>
             </Card>
 
-            <Tabs defaultValue="knowledge">
-              <TabsList>
-                <TabsTrigger className="cursor-pointer" value="knowledge">
+            <Tabs defaultValue="knowledge" className="w-full">
+              <TabsList
+                className="!grid !h-auto w-full grid-cols-2 gap-1.5 p-1.5 sm:grid-cols-4"
+                style={{ display: "grid", height: "auto" }}
+              >
+                <TabsTrigger
+                  className="cursor-pointer !h-9 !py-1.5"
+                  style={{ height: "2.25rem" }}
+                  value="knowledge"
+                >
                   Context
                 </TabsTrigger>
-                <TabsTrigger className="cursor-pointer" value="manage">
+                <TabsTrigger
+                  className="cursor-pointer !h-9 !py-1.5"
+                  style={{ height: "2.25rem" }}
+                  value="manage"
+                >
                   Edit & Manage
                 </TabsTrigger>
                 <TabsTrigger
-                  className="cursor-pointer flex items-center"
+                  className="cursor-pointer flex items-center justify-center gap-1.5 !h-9 !py-1.5"
+                  style={{ height: "2.25rem" }}
                   value="appearance"
                 >
-                  <Palette className="h-4 w-4 mr-1" />
-                  Appearance
+                  <Palette className="h-4 w-4 shrink-0" />
+                  <span>Appearance</span>
                 </TabsTrigger>
                 <TabsTrigger
-                  className="cursor-pointer flex items-center"
+                  className="cursor-pointer flex items-center justify-center gap-1.5 !h-9 !py-1.5"
+                  style={{ height: "2.25rem" }}
                   value="api"
                 >
-                  <Code2 className="h-4 w-4 mr-1" />
-                  API & Embed
+                  <Code2 className="h-4 w-4 shrink-0" />
+                  <span>API & Embed</span>
                 </TabsTrigger>
               </TabsList>
 
