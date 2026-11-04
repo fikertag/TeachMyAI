@@ -1,4 +1,5 @@
-import Link from "next/link";
+﻿import Link from "next/link";
+import { Check, ExternalLink } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { rga_ethify_cfg } from "@/lib/aiUtils/promots";
@@ -724,21 +725,46 @@ export function ManageTabContent({
           </div>
 
           {/* SECTION 3: External Model Keys */}
-          <div className="space-y-2">
+          <div id="external-model-keys-section" className="space-y-2">
             <div className="flex items-center justify-between gap-2">
               <div>
                 <p className="font-semibold">External Model Keys</p>
               </div>
               <span
-                className={`text-xs font-medium ${service?.hasGeminiApiKey ? "text-green-600" : "text-muted-foreground"}`}
+                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                  service?.hasGeminiApiKey
+                    ? "border border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold"
+                    : "bg-muted text-muted-foreground"
+                }`}
               >
+                <span
+                  className={`size-1.5 rounded-full ${
+                    service?.hasGeminiApiKey
+                      ? "bg-emerald-500"
+                      : "bg-muted-foreground/60"
+                  }`}
+                />
                 {service?.hasGeminiApiKey ? "Connected" : "Not set"}
               </span>
             </div>
 
-            <div className="rounded-md border bg-background p-4">
+            <div
+              className={`rounded-md border p-4 transition-colors ${
+                service?.hasGeminiApiKey
+                  ? "border-emerald-500/60 bg-emerald-500/[0.04] dark:border-emerald-500/50 dark:bg-emerald-500/[0.08]"
+                  : "border-border bg-background"
+              }`}
+            >
               <div>
-                <p className="text-sm font-medium">Google Gemini</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium">Google Gemini</p>
+                  {service?.hasGeminiApiKey ? (
+                    <span className="inline-flex items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                      <Check className="size-3 text-emerald-600 dark:text-emerald-400" />
+                      Active
+                    </span>
+                  ) : null}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   {service?.hasGeminiApiKey
                     ? `Key ending in ${service.geminiApiKeyLast4 ?? "****"}`
@@ -753,14 +779,37 @@ export function ManageTabContent({
               </div>
 
               <div className="mt-4 border-t pt-3">
-                <Label
-                  htmlFor="gemini-key-input-manage"
-                  className="text-xs font-medium"
-                >
-                  {service?.hasGeminiApiKey
-                    ? "Update Gemini API key"
-                    : "Add Gemini API key (optional)"}
-                </Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label
+                    htmlFor="gemini-key-input-manage"
+                    className="text-xs font-medium"
+                  >
+                    {service?.hasGeminiApiKey
+                      ? "Update Gemini API key"
+                      : "Add Gemini API key (optional)"}
+                  </Label>
+                  <a
+                    href="https://aistudio.google.com/api-keys"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-primary underline underline-offset-2 hover:opacity-80"
+                  >
+                    Get API key
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Go to{" "}
+                  <a
+                    href="https://aistudio.google.com/api-keys"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-foreground underline underline-offset-2 hover:text-primary"
+                  >
+                    https://aistudio.google.com/api-keys
+                  </a>
+                  , then create an API key, copy it, and insert it in this field.
+                </p>
                 <Input
                   id="gemini-key-input-manage"
                   type="password"

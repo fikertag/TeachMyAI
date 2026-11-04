@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -148,8 +148,12 @@ export default function BuilderPage() {
       setSlug("");
       setDescription("");
       setShowCreateForm(false);
-      setSuccess("Service created");
-      await loadServices();
+      if (data.service?.id) {
+        router.push(`/builder/${data.service.id}?created=true`);
+      } else {
+        setSuccess("Service created");
+        await loadServices();
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to create service");
     } finally {
